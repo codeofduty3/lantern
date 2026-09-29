@@ -1,0 +1,26 @@
+# Top-level packages. After a working install run:  pip freeze > requirements.txt  (pins all)
+sec-edgar-downloader>=5.0
+requests
+pyyaml
+playwright
+pdfplumber>=0.11
+pypdfium2
+pytesseract
+pillow
+camelot-py>=1.0
+opencv-python-headless
+pandas
+tabulate
+matplotlib
+jiwer>=3.0
+pydantic>=2
+psutil
+pytest
+dvc[s3]
+layoutparser
+effdet
+torch
+torchvision
+docling
+arelle-release
+boto3

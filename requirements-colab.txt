@@ -1,0 +1,11 @@
+# Only if the layout stage has to run in Colab (frozen-stage rule, Part 8)
+layoutparser
+effdet
+torch
+torchvision
+pdfplumber>=0.11
+pytesseract
+camelot-py>=1.0
+opencv-python-headless
+pandas
+pyyaml

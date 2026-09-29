@@ -1,0 +1,55 @@
+# Curated PDF row label -> us-gaap concept (step 1 of the mapping; label linkbase and fuzzy
+# matching cover the rest). Keys are normalized labels (lower case, no footnote markers,
+# no trailing colon); "section > label" disambiguates repeated labels. A dimensional
+# face-of-statement line is written Concept[MemberLocalName].
+income_statement:
+  net sales > products: RevenueFromContractWithCustomerExcludingAssessedTax[ProductMember]
+  net sales > services: RevenueFromContractWithCustomerExcludingAssessedTax[ServiceMember]
+  total net sales: RevenueFromContractWithCustomerExcludingAssessedTax
+  cost of sales > products: CostOfGoodsAndServicesSold[ProductMember]
+  cost of sales > services: CostOfGoodsAndServicesSold[ServiceMember]
+  total cost of sales: CostOfGoodsAndServicesSold
+  gross margin: GrossProfit
+  research and development: ResearchAndDevelopmentExpense
+  selling, general and administrative: SellingGeneralAndAdministrativeExpense
+  total operating expenses: OperatingExpenses
+  operating income: OperatingIncomeLoss
+  other income/(expense), net: NonoperatingIncomeExpense
+  income before provision for income taxes: IncomeLossFromContinuingOperationsBeforeIncomeTaxesExtraordinaryItemsNoncontrollingInterest
+  provision for income taxes: IncomeTaxExpenseBenefit
+  net income: NetIncomeLoss
+  earnings per share > basic: EarningsPerShareBasic
+  earnings per share > diluted: EarningsPerShareDiluted
+  shares used in computing earnings per share > basic: WeightedAverageNumberOfSharesOutstandingBasic
+  shares used in computing earnings per share > diluted: WeightedAverageNumberOfDilutedSharesOutstanding
+
+balance_sheet:
+  cash and cash equivalents: CashAndCashEquivalentsAtCarryingValue
+  current assets > marketable securities: MarketableSecuritiesCurrent
+  accounts receivable, net: AccountsReceivableNetCurrent
+  vendor non-trade receivables: NontradeReceivablesCurrent
+  inventories: InventoryNet
+  other current assets: OtherAssetsCurrent
+  total current assets: AssetsCurrent
+  non-current assets > marketable securities: MarketableSecuritiesNoncurrent
+  property, plant and equipment, net: PropertyPlantAndEquipmentNet
+  other non-current assets: OtherAssetsNoncurrent
+  total non-current assets: AssetsNoncurrent
+  total assets: Assets
+  accounts payable: AccountsPayableCurrent
+  other current liabilities: OtherLiabilitiesCurrent
+  deferred revenue: ContractWithCustomerLiabilityCurrent
+  commercial paper: CommercialPaper
+  current liabilities > term debt: LongTermDebtCurrent
+  total current liabilities: LiabilitiesCurrent
+  non-current liabilities > term debt: LongTermDebtNoncurrent
+  other non-current liabilities: OtherLiabilitiesNoncurrent
+  total non-current liabilities: LiabilitiesNoncurrent
+  total liabilities: Liabilities
+  common stock and additional paid-in capital: CommonStocksIncludingAdditionalPaidInCapital
+  accumulated deficit: RetainedEarningsAccumulatedDeficit
+  retained earnings/(accumulated deficit): RetainedEarningsAccumulatedDeficit
+  accumulated other comprehensive loss: AccumulatedOtherComprehensiveIncomeLossNetOfTax
+  accumulated other comprehensive income/(loss): AccumulatedOtherComprehensiveIncomeLossNetOfTax
+  total shareholders' equity: StockholdersEquity
+  total liabilities and shareholders' equity: LiabilitiesAndStockholdersEquity

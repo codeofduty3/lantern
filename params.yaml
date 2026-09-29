@@ -1,0 +1,71 @@
+# All tunable parameters. DVC stages list the sections they read.
+download:
+  ticker: AAPL
+  forms: ["10-K", "10-Q"]
+  limit_per_form: 1                 # one 10-K + one 10-Q inside the pinned window
+  after: "2024-01-01"
+  before: "2026-01-01"
+  user_agent_name: "NEU-DAMG7245-codeofduty3"
+  user_agent_email: "jash.k@northeastern.edu"
+
+render:
+  page_format: Letter
+  timeout_ms: 180000
+
+ocr:                                # thresholds justified in Exercise 1a
+  min_chars: 100                    # signal 1: fewer non-space chars -> "empty"
+  junk_ratio: 0.2                   # signal 2: junk-token share -> "garbled"
+  image_area: 0.6                   # signal 3: raster coverage -> "image"
+  dpi: 300                          # Exercise 1b knee: 200; 300 for statement safety margin
+  config: "--oem 1 --psm 6"
+  managed_below_conf: 70            # managed fallback if mean OCR conf is lower
+
+tables:
+  min_rulings: 6                    # >= ruling lines -> lattice tried first
+  accept_score: 80                  # accuracy - 0.5*whitespace
+  min_coverage: 0.6                 # share of the page/area numbers the table must contain
+  min_numbers: 40                   # page is a table candidate above this many numbers
+  fallback_flavors: [network]
+  stream: {row_tol: 2, edge_tol: 500}
+  managed_below_score: 60           # managed fallback if best quality score is lower
+
+layout:
+  model: "lp://efficientdet/PubLayNet"
+  score_threshold: 0.5
+  pad_pt: 8                         # padding added to Table boxes before Camelot
+  dpi: 150
+  qa_pages: 6                       # box-overlay QA images per run (>= 5 required)
+
+docling:
+  html_stem: AAPL_10K_20250927      # filing whose iXBRL HTML is also converted
+  table_mode: accurate
+
+managed:
+  enabled: false                    # default: read cache only, never call the API
+  provider: textract
+  region: us-east-1
+  max_pages: 10
+
+evaluate:
+  numeric_tolerance: 0.000001
+
+tests:                              # set from the measured baseline with a margin
+  max_wer_text: 0.10
+  max_wer_scanned: 0.15
+  min_cell_f1: 0.90
+
+bench:
+  max_pages: 100
+  vm_name: "8-vCPU cloud VM (assumption)"
+  vm_usd_per_hour: 0.40             # replace with the price you cite
+  gpu_vm_usd_per_hour: 1.20
+  filings_per_year: 5000
+  pages_per_filing: 100
+  managed_usd_per_1000_pages: {textract_text: 1.50, textract_tables: 15.00}  # aws.amazon.com/textract/pricing
+
+fixtures:
+  dpi: 200
+  scanned_pages: []                 # empty = auto: cover, prose, statement
+  statement_page: null              # null = auto income statement of the 10-K
+  multicol_pdf: null              # a PDF from another public SEC filing with columns
+  multicol_page: null

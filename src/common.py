@@ -1,0 +1,170 @@
+"""Shared helpers for every LANTERN stage: paths, params, manifest, page finders, reports."""
+import csv
+import hashlib
+import io
+import os
+import re
+from pathlib import Path
+
+import yaml
+
+ROOT = Path(__file__).resolve().parents[1]
+DATA = ROOT / "data"
+RAW = DATA / "raw"
+RENDERED = DATA / "rendered"
+PARSED = DATA / "parsed"
+TABLES = DATA / "tables"
+LAYOUT = DATA / "layout"
+FIGURES = DATA / "figures"
+DOCLING = DATA / "docling"
+EXPORT = DATA / "export"
+XBRL = DATA / "xbrl"
+BENCH = DATA / "bench"
+MANAGED = DATA / "managed"
+GROUND_TRUTH = DATA / "ground_truth"
+REPORTS = ROOT / "reports"
+FIXTURES = ROOT / "tests" / "fixtures"
+FIXTURE_GT = FIXTURES / "gt"
+CONFIG = ROOT / "config"
+
+# Numeric token as used in Lab 9: (1,234)  -5  $9,871  4.12
+NUM_RE = re.compile(r"\(?-?\$?\d[\d,]*(?:\.\d+)?\)?")
+STATEMENT_KINDS = {  # matched against a page's first lines (10-Q titles add CONDENSED)
+    "income_statement": r"CONSOLIDATED\s*STATEMENTS?\s*OF\s*(OPERATIONS|INCOME|EARNINGS)",
+    "comprehensive_income": r"CONSOLIDATED\s*STATEMENTS?\s*OF\s*COMPREHENSIVE",
+    "balance_sheet": r"CONSOLIDATED\s*BALANCE\s*SHEETS?",
+    "equity": r"CONSOLIDATED\s*STATEMENTS?\s*OF\s*(SHAREHOLDERS|STOCKHOLDERS)",
+    "cash_flows": r"CONSOLIDATED\s*STATEMENTS?\s*OF\s*CASH\s*FLOWS",
+}
+NOT_A_STATEMENT = re.compile(r"\bINDEX\b|\bITEM\s*\d", re.I)
+MANIFEST_FIELDS = ["stem", "accession", "cik", "ticker", "company", "form", "period",
+                   "source_file", "renderer", "renderer_version", "page_format", "sha256"]
+
+
+def load_params(section=None):
+    p = yaml.safe_load((ROOT / "params.yaml").read_text())
+    return p[section] if section else p
+
+
+def sha256(path=None, data: bytes = None):
+    h = hashlib.sha256()
+    if data is not None:
+        h.update(data)
+        return h.hexdigest()
+    with open(path, "rb") as f:
+        for chunk in iter(lambda: f.read(1 << 20), b""):
+            h.update(chunk)
+    return h.hexdigest()
+
+
+def rel(path) -> str:
+    """Repo-relative path string for provenance fields (no machine-specific prefixes)."""
+    try:
+        return str(Path(path).resolve().relative_to(ROOT))
+    except ValueError:
+        return str(path)
+
+
+def setup_tesseract():
+    """Honour TESSERACT_CMD (needed on Windows if tesseract is not on PATH)."""
+    import pytesseract
+    cmd = os.environ.get("TESSERACT_CMD")
+    if cmd:
+        pytesseract.pytesseract.tesseract_cmd = cmd
+    return pytesseract
+
+
+def load_manifest() -> dict:
+    """stem -> manifest row (data/rendered/manifest.csv, written by render.py)."""
+    m = RENDERED / "manifest.csv"
+    if not m.exists():
+        return {}
+    with open(m, newline="") as f:
+        return {r["stem"]: r for r in csv.DictReader(f)}
+
+
+def list_pdfs(inputs) -> list:
+    """Expand files/folders into a sorted list of PDFs."""
+    out = []
+    for p in inputs:
+        p = Path(p)
+        out += [p] if p.is_file() else sorted(p.glob("*.pdf"))
+    return out
+
+
+def page_pdf_bytes(pdf_path, pno: int) -> bytes:
+    """One page (1-based) as a standalone PDF - for page hashes, managed APIs, fixtures."""
+    import pypdfium2 as pdfium
+    src = pdfium.PdfDocument(str(pdf_path))
+    dst = pdfium.PdfDocument.new()
+    dst.import_pages(src, [pno - 1])
+    buf = io.BytesIO()
+    dst.save(buf)
+    return buf.getvalue()
+
+
+def numbers(text):
+    """Numeric tokens normalised: drop $ and trailing punctuation, keep sign/parens."""
+    out = []
+    for m in NUM_RE.finditer(text or ""):
+        t = m.group().replace("$", "").rstrip(",")
+        if t.count("(") != t.count(")"):
+            t = t.strip("()")
+        if any(ch.isdigit() for ch in t):
+            out.append(t)
+    return out
+
+
+def statement_kind(text, n_lines=4):
+    """Which primary statement a page is (title in its first lines), else None."""
+    head = "\n".join((text or "").splitlines()[:n_lines])
+    if NOT_A_STATEMENT.search(head):
+        return None
+    for kind, pat in STATEMENT_KINDS.items():
+        if re.search(pat, head, re.I):
+            return kind
+    return None
+
+
+def find_statement_page(pdf, kind=None):
+    """1-based page of a primary statement (IS/BS, or a given kind); most numbers wins."""
+    best, best_n, fallback, fallback_n = None, -1, 1, -1
+    for page in pdf.pages:
+        txt = page.extract_text() or ""
+        n = len(numbers(txt))
+        if n > fallback_n:
+            fallback, fallback_n = page.page_number, n
+        k = statement_kind(txt)
+        ok = k in ("income_statement", "balance_sheet") if kind is None else k == kind
+        if ok and n > best_n:
+            best, best_n = page.page_number, n
+    return best or fallback
+
+
+def find_prose_page(pdf, min_words=300):
+    """1-based page with lots of words and the lowest share of numbers."""
+    best, best_ratio = 1, 1.0
+    for page in pdf.pages:
+        words = (page.extract_text() or "").split()
+        if len(words) < min_words:
+            continue
+        ratio = len(numbers(" ".join(words))) / len(words)
+        if ratio < best_ratio:
+            best, best_ratio = page.page_number, ratio
+    return best
+
+
+AUTO_START, AUTO_END = "<!-- AUTO:START (generated, do not edit) -->", "<!-- AUTO:END -->"
+
+
+def write_report(path: Path, title: str, auto_md: str, discussion_hint: str = ""):
+    """Replace only the generated block of a report; keep everything the team wrote."""
+    path.parent.mkdir(parents=True, exist_ok=True)
+    block = f"{AUTO_START}\n{auto_md.rstrip()}\n{AUTO_END}"
+    if path.exists() and AUTO_START in path.read_text(encoding="utf-8"):
+        old = path.read_text(encoding="utf-8")
+        new = re.sub(re.escape(AUTO_START) + r".*?" + re.escape(AUTO_END),
+                     lambda _: block, old, flags=re.S)
+    else:
+        new = f"# {title}\n\n{block}\n\n## Discussion\n\n{discussion_hint}\n"
+    path.write_text(new, encoding="utf-8")

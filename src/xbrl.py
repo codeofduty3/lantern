@@ -1,0 +1,214 @@
+"""Part 11 - xbrl stage: Arelle facts, label->concept mapping, validation of both table paths.
+
+1. Load each filing's unpacked iXBRL .htm (next to its .xsd) with Arelle; keep numeric facts with
+   concept, value, period (instant/duration, end date minus one day), unit, decimals, dimensions;
+   de-duplicate on (concept, period, dims, unit).
+2. Map PDF row labels to concepts: config/label_map.yaml (curated) -> the filing's own label
+   linkbase -> difflib fuzzy match. The method is recorded per line.
+3. Compare every period with a tolerance from decimals; status in match, sign, scale_x...,
+   mismatch, pdf_missing, xbrl_missing. Traditional = data/tables, Docling = data/docling.
+4. Each non-match gets a suggested cause from the Lab 11 triage table; the team confirms it
+   and records the fix in reports/xbrl.md.
+
+Output: data/xbrl/facts.csv, data/xbrl/comparison.csv, reports/xbrl.md (generated block)
+"""
+import difflib
+import re
+import sys
+from datetime import timedelta
+from pathlib import Path
+
+import pandas as pd
+import yaml
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from common import CONFIG, DOCLING, RAW, REPORTS, TABLES, XBRL, load_manifest, write_report
+from tables import norm_label
+
+STATEMENTS = ("income_statement", "balance_sheet")
+PATHS = {"traditional": TABLES, "docling": DOCLING}
+
+
+# ------------------------------------------------------------------ 1. facts
+def ixbrl_file(accession: str) -> Path:
+    for htm in (RAW / "sec-edgar-filings").rglob(f"{accession}/unpacked/*.htm"):
+        if "ix:header" in htm.read_text(errors="ignore"):
+            return htm
+    raise FileNotFoundError(accession)
+
+
+def load_facts(htm: Path, stem: str) -> pd.DataFrame:
+    from arelle import Cntlr
+    cntlr = Cntlr.Cntlr(logFileName="logToPrint")
+    mx = cntlr.modelManager.load(str(htm))
+    rows = []
+    for f in mx.facts:
+        if not f.isNumeric or f.xValue is None or f.context is None:
+            continue
+        c = f.context
+        end = c.endDatetime - timedelta(days=1) if c.endDatetime else None  # Arelle gotcha
+        start = c.startDatetime if not c.isInstantPeriod else None
+        dims = ";".join(sorted(f"{d.localName}={v.memberQname.localName}"
+                               for d, v in c.qnameDims.items() if v.memberQname is not None))
+        rows.append({"stem": stem, "concept": f.concept.qname.localName,
+                     "prefix": f.concept.qname.prefix, "label": f.concept.label(lang="en"),
+                     "value": float(f.xValue), "instant": c.isInstantPeriod,
+                     "start": start.date() if start else None, "end": end.date() if end else None,
+                     "days": (end - start).days + 1 if start and end else 0,
+                     "dims": dims, "unit": f.unitID, "decimals": f.decimals})
+    mx.close()
+    df = pd.DataFrame(rows)
+    return df.drop_duplicates(["concept", "instant", "start", "end", "dims", "unit"])
+
+
+# ------------------------------------------------------------------ 2. mapping
+def load_map():
+    return yaml.safe_load((CONFIG / "label_map.yaml").read_text()) or {}
+
+
+def parse_target(t: str):
+    """'Concept' or 'Concept[MemberLocalName]' -> (concept, member or None)."""
+    m = re.fullmatch(r"([^\[]+)(?:\[([^\]]+)\])?", t.strip())
+    return m.group(1), m.group(2)
+
+
+def map_label(kind, section, label, curated, lab2con):
+    key = f"{section} > {label}" if section else label
+    cm = curated.get(kind, {}) or {}
+    for k in (key, label):
+        if k in cm:
+            return cm[k], "manual"
+    for k in sorted(cm, key=len, reverse=True):  # long labels: curated key is a prefix
+        if " > " not in k and len(k) > 12 and label.startswith(k):
+            return cm[k], "manual"
+    if label in lab2con:
+        return lab2con[label], "label"
+    hit = difflib.get_close_matches(label, list(lab2con), n=1, cutoff=0.8)
+    if hit:
+        return lab2con[hit[0]], "fuzzy"
+    return None, "unmapped"
+
+
+# ------------------------------------------------------------------ 3. compare
+def tolerance(decimals):
+    if decimals in (None, "INF", ""):
+        return 0.5
+    return 0.5 * 10 ** (-int(decimals))
+
+
+def compare(pdf_val, xbrl_val, decimals):
+    if pdf_val is None or pd.isna(pdf_val):
+        return "pdf_missing"
+    if xbrl_val is None:
+        return "xbrl_missing"
+    tol = tolerance(decimals)
+    if abs(pdf_val - xbrl_val) <= tol:
+        return "match"
+    if abs(abs(pdf_val) - abs(xbrl_val)) <= tol:
+        return "sign"
+    for k in (1e3, 1e6, 1e9):
+        if abs(pdf_val * k - xbrl_val) <= max(tol, 0.5 * k):
+            return f"scale_x{int(k)}"      # PDF value under-scaled
+        if abs(pdf_val / k - xbrl_val) <= max(tol, 0.5):
+            return f"scale_x1/{int(k)}"    # PDF value over-scaled (e.g. EPS multiplied)
+    return "mismatch"
+
+
+CAUSE = {  # Lab 11 triage table -> suggested cause (team confirms)
+    "sign": "presentation: statement shows the value negated vs XBRL (sign policy)",
+    "scale": "normalization: caption scale not applied or a missing row exception",
+    "mismatch": "period alignment / column shift, or wrong concept (check mapping)",
+    "pdf_missing": "table structure: row or column not extracted (see bake-off)",
+    "xbrl_missing": "mapping: extension, dimensional or unmapped concept",
+}
+
+
+def pick_fact(facts, concept, member, period, kind, periods, form):
+    f = facts[facts["concept"] == concept]
+    f = f[f["dims"].str.endswith(f"={member}") & ~f["dims"].str.contains(";")] if member \
+        else f[f["dims"] == ""]
+    year = int(period.split("_")[0])
+    if kind == "balance_sheet":
+        f = f[f["instant"] & f["end"].apply(lambda d: d is not None and d.year == year)]
+        return f.sort_values("end").iloc[-1] if len(f) else None
+    f = f[~f["instant"] & f["end"].apply(lambda d: d is not None and d.year == year)]
+    if f.empty:
+        return None
+    if form == "10-K":
+        f = f[(f["days"] > 350) & (f["days"] < 380)]
+        return f.iloc[0] if len(f) else None
+    # 10-Q: first column of a year = quarter, second (suffix _2) = year-to-date
+    f = f.sort_values("days")
+    return f.iloc[0] if "_" not in period else f.iloc[-1]
+
+
+def validate(stem, m, facts, curated):
+    lab2con = dict(zip(facts["label"].map(norm_label), facts["concept"]))
+    out = []
+    for path, folder in PATHS.items():
+        for kind in STATEMENTS:
+            f = folder / f"{stem}_{kind}.cells.csv"
+            if not f.exists():
+                out.append({"stem": stem, "path": path, "statement": kind, "status": "no_table"})
+                continue
+            cells = pd.read_csv(f, dtype={"section": str, "label": str, "period": str}).fillna(
+                {"section": "", "label": ""})
+            periods = list(dict.fromkeys(cells["period"]))
+            for (sec, lab), g in cells.groupby(["section", "label"], sort=False):
+                target, method = map_label(kind, sec, lab, curated, lab2con)
+                concept, member = parse_target(target) if target else (None, None)
+                for _, c in g.iterrows():
+                    fact = pick_fact(facts, concept, member, c["period"], kind, periods,
+                                     m["form"]) if concept else None
+                    xv = None if fact is None else fact["value"]
+                    pv = None if pd.isna(c["value"]) else float(c["value"])
+                    st = compare(pv, xv, None if fact is None else fact["decimals"])
+                    cause = "" if st == "match" else CAUSE.get(st.split("_x")[0], "")
+                    out.append({"stem": stem, "path": path, "statement": kind, "section": sec,
+                                "label": lab, "period": c["period"], "raw": c["raw"],
+                                "pdf_value": pv, "concept": target or "", "method": method,
+                                "xbrl_value": xv, "status": st, "suggested_cause": cause})
+    return out
+
+
+def report(cmp: pd.DataFrame):
+    rows = cmp[cmp["status"] != "no_table"]
+    md = ["## Match rate per statement and extraction path\n",
+          "| filing | statement | path | lines x periods | match | match rate |",
+          "|---|---|---|---|---|---|"]
+    for (stem, st, path), g in rows.groupby(["stem", "statement", "path"]):
+        n, k = len(g), (g["status"] == "match").sum()
+        md.append(f"| {stem} | {st} | {path} | {n} | {k} | {k / n:.1%} |")
+    for _, r in cmp[cmp["status"] == "no_table"].iterrows():
+        md.append(f"| {r['stem']} | {r['statement']} | {r['path']} | no table | - | - |")
+    md += ["", "## Mapping methods\n", rows.groupby(["path", "method"]).size()
+           .rename("cells").reset_index().to_markdown(index=False), "",
+           "## Every non-match (suggested cause; confirm and add the fix below)\n"]
+    bad = rows[rows["status"] != "match"]
+    md.append(bad[["stem", "path", "statement", "label", "period", "raw", "pdf_value",
+                   "concept", "xbrl_value", "status", "method", "suggested_cause"]]
+              .to_markdown(index=False) if len(bad) else "None.")
+    write_report(REPORTS / "xbrl.md", "XBRL validation", "\n".join(md),
+                 "For every non-match: confirmed cause (OCR, table structure, normalization, "
+                 "mapping, period alignment, extension concept, rounding) and the fix you made.")
+
+
+def main():
+    XBRL.mkdir(parents=True, exist_ok=True)
+    curated = load_map()
+    all_facts, cmp = [], []
+    for stem, m in load_manifest().items():
+        facts = load_facts(ixbrl_file(m["accession"]), stem)
+        all_facts.append(facts)
+        cmp += validate(stem, m, facts, curated)
+        print(f"{stem}: {len(facts)} numeric facts")
+    pd.concat(all_facts).to_csv(XBRL / "facts.csv", index=False)
+    cmp = pd.DataFrame(cmp)
+    cmp.to_csv(XBRL / "comparison.csv", index=False)
+    report(cmp)
+    ok = cmp[cmp["status"] != "no_table"]
+    print(ok.groupby(["path", "statement"])["status"].apply(lambda s: f"{(s == 'match').mean():.1%}"))
+
+
+if __name__ == "__main__":
+    main()
