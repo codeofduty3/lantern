@@ -1,0 +1,36 @@
+# Python virtual environments and dependency artifacts
+.venv/
+venv/
+env/
+ENV/
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.tox/
+.nox/
+.coverage
+.coverage.*
+htmlcov/
+
+# Local environment / editor files
+.DS_Store
+.vscode/
+.idea/
+
+# Generated project data and outputs
+# Keep the source repo clean; these are produced by the pipeline.
+data/
+reports/
+
+# DVC / caching leftovers
+.dvc/cache/
+.dvc/tmp/
+.dvc/config.local
+
+# Optional: large model/cache directories if used locally
+models/
+weights/
+checkpoints/

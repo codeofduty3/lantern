@@ -1,6 +1,6 @@
 # All tunable parameters. DVC stages list the sections they read.
 download:
-  ticker: AAPL
+  ticker: AKAM
   forms: ["10-K", "10-Q"]
   limit_per_form: 1                 # one 10-K + one 10-Q inside the pinned window
   after: "2024-01-01"
@@ -37,7 +37,7 @@ layout:
   qa_pages: 6                       # box-overlay QA images per run (>= 5 required)
 
 docling:
-  html_stem: AAPL_10K_20250927      # filing whose iXBRL HTML is also converted
+  html_stem: AKAM_10K_20250927      # filing whose iXBRL HTML is also converted
   table_mode: accurate
 
 managed:
