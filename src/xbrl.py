@@ -73,20 +73,28 @@ def parse_target(t: str):
 
 
 def map_label(kind, section, label, curated, lab2con):
+    """Candidates in cascade order: curated, the filing's own labels, fuzzy. The caller keeps
+    the first one the filing tagged: companies tag the same line with different concepts in
+    the 10-K and the 10-Q, so a curated concept with no fact must fall through."""
     key = f"{section} > {label}" if section else label
     cm = curated.get(kind, {}) or {}
+    cands = []
     for k in (key, label):
         if k in cm:
-            return cm[k], "manual"
-    for k in sorted(cm, key=len, reverse=True):  # long labels: curated key is a prefix
-        if " > " not in k and len(k) > 12 and label.startswith(k):
-            return cm[k], "manual"
+            cands.append((cm[k], "manual"))
+            break
+    else:
+        for k in sorted(cm, key=len, reverse=True):  # long labels: curated key is a prefix
+            if " > " not in k and len(k) > 12 and label.startswith(k):
+                cands.append((cm[k], "manual"))
+                break
     if label in lab2con:
-        return lab2con[label], "label"
+        cands.append((lab2con[label], "label"))
     hit = difflib.get_close_matches(label, list(lab2con), n=1, cutoff=0.8)
     if hit:
-        return lab2con[hit[0]], "fuzzy"
-    return None, "unmapped"
+        cands.append((lab2con[hit[0]], "fuzzy"))
+    seen = set()
+    return [c for c in cands if not (c[0] in seen or seen.add(c[0]))]
 
 
 # ------------------------------------------------------------------ 3. compare
@@ -155,7 +163,14 @@ def validate(stem, m, facts, curated):
                 {"section": "", "label": ""})
             periods = list(dict.fromkeys(cells["period"]))
             for (sec, lab), g in cells.groupby(["section", "label"], sort=False):
-                target, method = map_label(kind, sec, lab, curated, lab2con)
+                cands = map_label(kind, sec, lab, curated, lab2con)
+                target, method = cands[0] if cands else (None, "unmapped")
+                for t, meth in cands:  # first candidate the filing actually tagged
+                    c_, m_ = parse_target(t)
+                    if any(pick_fact(facts, c_, m_, p, kind, periods, m["form"]) is not None
+                           for p in periods):
+                        target, method = t, meth
+                        break
                 concept, member = parse_target(target) if target else (None, None)
                 for _, c in g.iterrows():
                     fact = pick_fact(facts, concept, member, c["period"], kind, periods,

@@ -7,6 +7,7 @@ dei:DocumentFiscalYearFocus / dei:DocumentFiscalPeriodFocus iXBRL facts. section
 
 Output: data/export/{stem}.jsonl, {stem}.md, {stem}.txt, format_sizes.csv
 """
+import bisect
 import csv
 import html
 import re
@@ -53,6 +54,32 @@ def item_heading(b) -> str:
     return (m.group(1).rstrip(".") + "." + m.group(2)).strip()[:120]
 
 
+ITEM_LINE_RE = re.compile(
+    r"^\s*(?:PART\s+[IV]+\s*[—–-]?\s*)?(Item\s+\d{1,2}[A-C]?\.)\s*(.*)$", re.I)
+TOC_LINE_RE = re.compile(r"\s\d{1,3}$")  # table-of-contents lines end with a page number
+
+
+def item_marks(pdf_path):
+    """(page, top, heading) for every real Item heading in the PDF, in reading order.
+
+    Reads every text line with pdfplumber, so headings the layout model missed are found too.
+    Table-of-contents lines (ending in a page number) are skipped.
+    """
+    import pdfplumber
+    marks = []
+    with pdfplumber.open(pdf_path) as pdf:
+        for page in pdf.pages:
+            for ln in page.extract_text_lines():
+                text = ln["text"].replace("\xa0", " ").strip()
+                m = ITEM_LINE_RE.match(text)
+                if not m or TOC_LINE_RE.search(text) or len(text) > 150:
+                    continue
+                heading = (m.group(1) + " " + m.group(2)).strip()[:120]
+                marks.append((page.page_number, ln["top"], heading))
+    marks.sort(key=lambda m: m[:2])
+    return marks
+
+
 def table_obj(t):
     if not t:
         return None
@@ -74,9 +101,12 @@ def export_doc(stem, m):
     base = {"doc_id": m["accession"], "company": m["company"], "cik": m["cik"],
             "ticker": m["ticker"], "form": m["form"], **dei,
             "source_path": rel(pdf), "sha256": sha256(pdf)}
-    recs, item = [], None
+    marks = item_marks(pdf)                      # Item headings from the full page text
+    keys = [(p, t) for p, t, _ in marks]
+    recs = []
     for b in read_jsonl(LAYOUT / f"{stem}.blocks.jsonl"):
-        item = item_heading(b) or item
+        i = bisect.bisect_right(keys, (b["page"], b["bbox"][1] + 2)) - 1
+        item = marks[i][2] if i >= 0 else None   # last Item heading above this block
         recs.append({**base, "page": b["page"], "section": item or b.get("title_section"),
                      "block_id": b["block_id"], "block_type": b["block_type"],
                      "bbox": b["bbox"], "text": b.get("text"), "table": table_obj(b.get("table")),

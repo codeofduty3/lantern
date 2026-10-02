@@ -31,13 +31,13 @@ tables:
 
 layout:
   model: "lp://efficientdet/PubLayNet"
-  score_threshold: 0.5
+  score_threshold: 0.3
   pad_pt: 8                         # padding added to Table boxes before Camelot
   dpi: 150
-  qa_pages: 6                       # box-overlay QA images per run (>= 5 required)
+  qa_pages: 10                       # box-overlay QA images per run (>= 5 required)
 
 docling:
-  html_stem: AKAM_10K_20250927      # filing whose iXBRL HTML is also converted
+  html_stem: AKAM_10K_20241231     # filing whose iXBRL HTML is also converted
   table_mode: accurate
 
 managed:

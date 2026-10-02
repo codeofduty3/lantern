@@ -35,8 +35,18 @@ AUDIT_CSV = REPORTS / "layout_audit.csv"
 
 
 def load_model(name):
+    import argparse
+    import numpy as np
+    import torch
     import layoutparser as lp
-    return lp.AutoLayoutModel(name)
+
+    # PyTorch >= 2.6 only unpickles allowlisted types; the PubLayNet
+    # EfficientDet checkpoint also stores these objects. Trusted source.
+    safe = [argparse.Namespace, np.dtype,
+            (np.core.multiarray.scalar, "numpy.core.multiarray.scalar")]
+    safe += [type(np.dtype(t)) for t in ("float32", "float64", "int32", "int64", "bool")]
+    with torch.serialization.safe_globals(safe):
+        return lp.AutoLayoutModel(name)
 
 
 def detect(model, page, dpi, thr):
@@ -104,7 +114,8 @@ def route(b, page, pdf_path, stem, idx, cfg, ocfg, tcfg, versions):
             rec["table"] = {"columns": ["section", "label"] + periods,
                             "rows": [[k[0], k[1]] + [v.get(p) for p in periods]
                                      for k, v in rows.items()],
-                            "raw_cells": df.astype(str).values.tolist(),
+                            "raw_cells": [[str(v) for v in row]
+                                          for row in df.fillna("").values.tolist()],
                             "scale": scale_from_caption(cap), "padded_bbox": box}
             rec["extractor"] = f"camelot-{res['method']}" if res["method"] != "pdfplumber" \
                 else "pdfplumber-table"

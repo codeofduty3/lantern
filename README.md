@@ -2,7 +2,7 @@
 
 A reproducible pipeline that turns SEC 10-K/10-Q filings into a layout-aware, XBRL-validated
 corpus (Markdown + JSONL with page/bbox provenance), versioned end-to-end with DVC.
-Team: codeofduty3. Company: AAPL - one 10-K and one 10-Q filed 2024-01-01..2026-01-01 (pinned in `params.yaml`).
+Team: codeofduty3. Company: AKAM (Akamai Technologies) - one 10-K and one 10-Q filed 2024-01-01..2026-01-01 (pinned in `params.yaml`).
 
 - Codelab: `<link>`
 - Demo video (10 min): `<link>`
