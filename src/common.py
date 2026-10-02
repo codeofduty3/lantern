@@ -36,7 +36,11 @@ STATEMENT_KINDS = {  # matched against a page's first lines (10-Q titles add CON
     "equity": r"CONSOLIDATED\s*STATEMENTS?\s*OF\s*(SHAREHOLDERS|STOCKHOLDERS)",
     "cash_flows": r"CONSOLIDATED\s*STATEMENTS?\s*OF\s*CASH\s*FLOWS",
 }
-NOT_A_STATEMENT = re.compile(r"\bINDEX\b|\bITEM\s*\d", re.I)
+NOT_A_STATEMENT = re.compile(r"\bINDEX\b", re.I)
+ITEM_LINE = re.compile(r"^\s*ITEM\s*\d", re.I)
+# What may follow a title on its line: upper-case words ("... AND COMPREHENSIVE INCOME"),
+# "continued", "(unaudited)". Prose that merely names a statement fails this.
+TITLE_TAIL = re.compile(r"(?:[\s,]|[A-Z’'&()-]+|\(?continued\)?|\(unaudited\))*")
 MANIFEST_FIELDS = ["stem", "accession", "cik", "ticker", "company", "form", "period",
                    "source_file", "renderer", "renderer_version", "page_format", "sha256"]
 
@@ -115,14 +119,21 @@ def numbers(text):
     return out
 
 
-def statement_kind(text, n_lines=4):
-    """Which primary statement a page is (title in its first lines), else None."""
-    head = "\n".join((text or "").splitlines()[:n_lines])
-    if NOT_A_STATEMENT.search(head):
+def statement_kind(text, n_lines=6):
+    """Which primary statement a page is (title line in its first lines), else None.
+
+    The title must be a line of its own: prose such as "...included in the consolidated
+    statements of income for the..." can wrap into the first lines of a notes page. One
+    "Item 1. Financial Statements" line may precede the title (first 10-Q statement page);
+    two or more Item lines mean a table of contents."""
+    lines = (text or "").splitlines()[:n_lines]
+    if NOT_A_STATEMENT.search("\n".join(lines)) or sum(bool(ITEM_LINE.match(l)) for l in lines) > 1:
         return None
     for kind, pat in STATEMENT_KINDS.items():
-        if re.search(pat, head, re.I):
-            return kind
+        for l in lines:
+            m = re.match(rf"\s*(?:CONDENSED\s*)?{pat}", l, re.I)
+            if m and TITLE_TAIL.fullmatch(l[m.end():]):
+                return kind
     return None
 
 

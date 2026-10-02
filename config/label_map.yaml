@@ -2,54 +2,70 @@
 # matching cover the rest). Keys are normalized labels (lower case, no footnote markers,
 # no trailing colon); "section > label" disambiguates repeated labels. A dimensional
 # face-of-statement line is written Concept[MemberLocalName].
+# Company: AKAM (Akamai Technologies). Each concept was checked against the filing's own
+# non-dimensional XBRL fact of equal value.
+# Keys longer than 12 characters also match as a prefix of the PDF label, so long labels
+# with share counts or dates ("common stock, $0.01 par value; ...") need only their start.
 income_statement:
-  net sales > products: RevenueFromContractWithCustomerExcludingAssessedTax[ProductMember]
-  net sales > services: RevenueFromContractWithCustomerExcludingAssessedTax[ServiceMember]
-  total net sales: RevenueFromContractWithCustomerExcludingAssessedTax
-  cost of sales > products: CostOfGoodsAndServicesSold[ProductMember]
-  cost of sales > services: CostOfGoodsAndServicesSold[ServiceMember]
-  total cost of sales: CostOfGoodsAndServicesSold
-  gross margin: GrossProfit
+  revenue: RevenueFromContractWithCustomerIncludingAssessedTax
+  cost of revenue (exclusive of amortization: CostOfRevenue
   research and development: ResearchAndDevelopmentExpense
-  selling, general and administrative: SellingGeneralAndAdministrativeExpense
-  total operating expenses: OperatingExpenses
-  operating income: OperatingIncomeLoss
-  other income/(expense), net: NonoperatingIncomeExpense
-  income before provision for income taxes: IncomeLossFromContinuingOperationsBeforeIncomeTaxesExtraordinaryItemsNoncontrollingInterest
+  sales and marketing: SellingAndMarketingExpense
+  general and administrative: GeneralAndAdministrativeExpense
+  amortization of acquired intangible assets: AmortizationOfIntangibleAssets
+  restructuring charge: RestructuringCharges
+  restructuring (benefit) charge: RestructuringCharges
+  total costs and operating expenses: CostsAndExpenses
+  income from operations: OperatingIncomeLoss
+  interest and marketable securities income, net: InterestAndMarketableSecuritiesIncomeLossNet
+  interest expense: InterestExpenseNonoperating
+  other expense, net: OtherNonoperatingExpenseNet
+  income before provision for income taxes: IncomeLossFromContinuingOperationsBeforeIncomeTaxesMinorityInterestAndIncomeLossFromEquityMethodInvestments
   provision for income taxes: IncomeTaxExpenseBenefit
+  gain (loss) from equity method investment: IncomeLossFromEquityMethodInvestments
   net income: NetIncomeLoss
-  earnings per share > basic: EarningsPerShareBasic
-  earnings per share > diluted: EarningsPerShareDiluted
-  shares used in computing earnings per share > basic: WeightedAverageNumberOfSharesOutstandingBasic
-  shares used in computing earnings per share > diluted: WeightedAverageNumberOfDilutedSharesOutstanding
+  net income per share > basic: EarningsPerShareBasic
+  net income per share > diluted: EarningsPerShareDiluted
+  shares used in per share calculations > basic: WeightedAverageNumberOfSharesOutstandingBasic
+  shares used in per share calculations > diluted: WeightedAverageNumberOfDilutedSharesOutstanding
 
 balance_sheet:
+  # current assets
   cash and cash equivalents: CashAndCashEquivalentsAtCarryingValue
   current assets > marketable securities: MarketableSecuritiesCurrent
   accounts receivable, net: AccountsReceivableNetCurrent
-  vendor non-trade receivables: NontradeReceivablesCurrent
-  inventories: InventoryNet
-  other current assets: OtherAssetsCurrent
+  prepaid expenses and other current assets: PrepaidExpenseAndOtherAssetsCurrent
   total current assets: AssetsCurrent
-  non-current assets > marketable securities: MarketableSecuritiesNoncurrent
-  property, plant and equipment, net: PropertyPlantAndEquipmentNet
-  other non-current assets: OtherAssetsNoncurrent
-  total non-current assets: AssetsNoncurrent
+  # non-current assets: AKAM prints no "non-current" header, so these rows have no section
+  marketable securities: MarketableSecuritiesNoncurrent
+  property and equipment, net: PropertyPlantAndEquipmentNet
+  operating lease right-of-use assets: OperatingLeaseRightOfUseAsset
+  acquired intangible assets, net: IntangibleAssetsNetExcludingGoodwill
+  goodwill: Goodwill
+  deferred income tax assets: DeferredIncomeTaxAssetsNet
+  other assets: OtherAssetsNoncurrent
   total assets: Assets
+  # current liabilities
   accounts payable: AccountsPayableCurrent
+  accrued expenses: AccruedLiabilitiesCurrent
+  current liabilities > deferred revenue: ContractWithCustomerLiabilityCurrent
+  current liabilities > convertible senior notes: ConvertibleNotesPayableCurrent
+  current liabilities > operating lease liabilities: OperatingLeaseLiabilityCurrent
   other current liabilities: OtherLiabilitiesCurrent
-  deferred revenue: ContractWithCustomerLiabilityCurrent
-  commercial paper: CommercialPaper
-  current liabilities > term debt: LongTermDebtCurrent
   total current liabilities: LiabilitiesCurrent
-  non-current liabilities > term debt: LongTermDebtNoncurrent
-  other non-current liabilities: OtherLiabilitiesNoncurrent
-  total non-current liabilities: LiabilitiesNoncurrent
+  # non-current liabilities (no section header, as above)
+  deferred revenue: ContractWithCustomerLiabilityNoncurrent
+  convertible senior notes: ConvertibleLongTermNotesPayable
+  deferred income tax liabilities: DeferredIncomeTaxLiabilitiesNet
+  operating lease liabilities: OperatingLeaseLiabilityNoncurrent
+  other liabilities: OtherLiabilitiesNoncurrent
   total liabilities: Liabilities
-  common stock and additional paid-in capital: CommonStocksIncludingAdditionalPaidInCapital
-  accumulated deficit: RetainedEarningsAccumulatedDeficit
-  retained earnings/(accumulated deficit): RetainedEarningsAccumulatedDeficit
+  # stockholders' equity
+  junior participating preferred stock: PreferredStockValue
+  common stock, $0.01 par value: CommonStockValue
+  additional paid-in capital: AdditionalPaidInCapital
+  treasury stock, at cost: TreasuryStockCommonValue
   accumulated other comprehensive loss: AccumulatedOtherComprehensiveIncomeLossNetOfTax
-  accumulated other comprehensive income/(loss): AccumulatedOtherComprehensiveIncomeLossNetOfTax
-  total shareholders' equity: StockholdersEquity
-  total liabilities and shareholders' equity: LiabilitiesAndStockholdersEquity
+  retained earnings: RetainedEarningsAccumulatedDeficit
+  total stockholders' equity: StockholdersEquity
+  total liabilities and stockholders' equity: LiabilitiesAndStockholdersEquity

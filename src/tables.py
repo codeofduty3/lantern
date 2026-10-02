@@ -229,7 +229,7 @@ def ref_numbers(page, bbox=None):
 
 
 def coverage(df, ref):
-    got = Counter(numbers(" ".join(df.astype(str).values.ravel())))
+    got = Counter(numbers(" ".join(map(str, df.fillna("").values.ravel()))))
     return sum((got & ref).values()) / max(sum(ref.values()), 1)
 
 
