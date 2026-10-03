@@ -1,0 +1,16 @@
+{
+  "scanned": {
+    "source": "AKAM_10K_20241231.pdf",
+    "pages": [
+      1,
+      13,
+      53
+    ],
+    "dpi": 200
+  },
+  "statement": {
+    "source": "AKAM_10K_20241231.pdf",
+    "page": 53
+  },
+  "multicol": "SYNTHETIC: text of AKAM_10K_20241231.pdf page 13 re-rendered in two CSS columns (our filings have no multi-column page). Replace via params fixtures.multicol_pdf."
+}
