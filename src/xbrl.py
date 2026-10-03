@@ -37,7 +37,7 @@ def ixbrl_file(accession: str) -> Path:
     raise FileNotFoundError(accession)
 
 
-def load_facts(htm: Path, stem: str) -> pd.DataFrame:
+def load_facts(htm: Path, stem: str) -> tuple:  # (facts df, norm label -> concept)
     from arelle import Cntlr
     cntlr = Cntlr.Cntlr(logFileName="logToPrint")
     mx = cntlr.modelManager.load(str(htm))
@@ -56,9 +56,28 @@ def load_facts(htm: Path, stem: str) -> pd.DataFrame:
                      "start": start.date() if start else None, "end": end.date() if end else None,
                      "days": (end - start).days + 1 if start and end else 0,
                      "dims": dims, "unit": f.unitID, "decimals": f.decimals})
-    mx.close()
     df = pd.DataFrame(rows)
-    return df.drop_duplicates(["concept", "instant", "start", "end", "dims", "unit"])
+    df = df.drop_duplicates(["concept", "instant", "start", "end", "dims", "unit"])
+    lab2con = filing_labels(mx, set(df["concept"])) if len(df) else {}
+    mx.close()
+    return df, lab2con
+
+
+def filing_labels(mx, reported: set) -> dict:
+    """norm_label -> concept, from EVERY role in the filing's label linkbase.
+
+    Statements print the preferred label of each line (terse/total/negated/periodStart...),
+    so matching only the standard label misses most captions. Documentation labels are
+    definitions, not captions, and are skipped. First mapping wins on collisions."""
+    from arelle import XbrlConst
+    out = {}
+    for rel in mx.relationshipSet(XbrlConst.conceptLabel).modelRelationships:
+        concept, res = rel.fromModelObject.qname.localName, rel.toModelObject
+        if concept not in reported or res.role == XbrlConst.documentationLabel \
+                or not res.textValue:
+            continue
+        out.setdefault(norm_label(res.textValue), concept)
+    return out
 
 
 # ------------------------------------------------------------------ 2. mapping
@@ -150,8 +169,7 @@ def pick_fact(facts, concept, member, period, kind, periods, form):
     return f.iloc[0] if "_" not in period else f.iloc[-1]
 
 
-def validate(stem, m, facts, curated):
-    lab2con = dict(zip(facts["label"].map(norm_label), facts["concept"]))
+def validate(stem, m, facts, curated, lab2con):
     out = []
     for path, folder in PATHS.items():
         for kind in STATEMENTS:
@@ -213,9 +231,9 @@ def main():
     curated = load_map()
     all_facts, cmp = [], []
     for stem, m in load_manifest().items():
-        facts = load_facts(ixbrl_file(m["accession"]), stem)
+        facts, lab2con = load_facts(ixbrl_file(m["accession"]), stem)
         all_facts.append(facts)
-        cmp += validate(stem, m, facts, curated)
+        cmp += validate(stem, m, facts, curated, lab2con)
         print(f"{stem}: {len(facts)} numeric facts")
     pd.concat(all_facts).to_csv(XBRL / "facts.csv", index=False)
     cmp = pd.DataFrame(cmp)

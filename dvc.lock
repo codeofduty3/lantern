@@ -341,13 +341,13 @@ stages:
       size: 18492
     - path: src/xbrl.py
       hash: md5
-      md5: c2b4ab25c84898f6d3dfb4ae3ee85927
-      size: 10844
+      md5: e9c02763f3e29f319ec19ee80a333354
+      size: 11726
     outs:
     - path: data/xbrl
       hash: md5
-      md5: 094e6697cc9f552e71008c10eacbb82f.dir
-      size: 530990
+      md5: e91c5b4eb34e3569a6cd01e4a40c21c4.dir
+      size: 529935
       nfiles: 2
   evaluate:
     cmd: python src/evaluate.py
@@ -379,8 +379,8 @@ stages:
       nfiles: 310
     - path: data/xbrl
       hash: md5
-      md5: 094e6697cc9f552e71008c10eacbb82f.dir
-      size: 530990
+      md5: e91c5b4eb34e3569a6cd01e4a40c21c4.dir
+      size: 529935
       nfiles: 2
     - path: src/evaluate.py
       hash: md5
@@ -402,7 +402,7 @@ stages:
     outs:
     - path: reports/metrics.json
       hash: md5
-      md5: 36f79341ce1b3c99013e0847531c8d14
+      md5: caad28cbd5664f011769d28bc2975602
       size: 581
     - path: reports/plots/drift.png
       hash: md5
