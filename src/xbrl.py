@@ -91,6 +91,14 @@ def parse_target(t: str):
     return m.group(1), m.group(2)
 
 
+NOSPACE = re.compile(r"\s+")
+
+
+def nospace(s) -> str:
+    """Key with every whitespace removed: tolerate split words ("other curr ent lia bilities")."""
+    return NOSPACE.sub("", s or "")
+
+
 def map_label(kind, section, label, curated, lab2con):
     """Candidates in cascade order: curated, the filing's own labels, fuzzy. The caller keeps
     the first one the filing tagged: companies tag the same line with different concepts in
@@ -109,6 +117,22 @@ def map_label(kind, section, label, curated, lab2con):
                 break
     if label in lab2con:
         cands.append((lab2con[label], "label"))
+    if not cands:  # extraction-tolerant: split words, then wrapped labels (before fuzzy)
+        ns = nospace(label)
+        cm_ns = {nospace(k): v for k, v in cm.items()}
+        for k in (nospace(key), ns):
+            if k in cm_ns:
+                cands.append((cm_ns[k], "nospace"))
+                break
+        lab_ns = {}
+        for l, v in lab2con.items():
+            lab_ns.setdefault(nospace(l), v)
+        if not cands and ns in lab_ns:
+            cands.append((lab_ns[ns], "nospace"))
+        if not cands and len(ns) >= 6:  # wrapped label: the tail of exactly one caption
+            tails = {v for l, v in lab_ns.items() if l != ns and l.endswith(ns)}
+            if len(tails) == 1:
+                cands.append((tails.pop(), "suffix"))
     hit = difflib.get_close_matches(label, list(lab2con), n=1, cutoff=0.8)
     if hit:
         cands.append((lab2con[hit[0]], "fuzzy"))
@@ -169,19 +193,58 @@ def pick_fact(facts, concept, member, period, kind, periods, form):
     return f.iloc[0] if "_" not in period else f.iloc[-1]
 
 
+BS_ZONES = (("totalcurrentassets", "current assets"), ("totalassets", ""),
+            ("totalcurrentliabilities", "current liabilities"), ("totalliabilities", ""))
+
+
+def infer_sections(cells, cm):
+    """Restore lost balance sheet sections (10-Q traditional) from subtotal positions.
+
+    A row keeps its extracted section only if the curated map uses it (whitespace
+    removed); blank or garbled sections are inferred from the first subtotal at or
+    after the row (rows are in table order; the damaged 10-Q table starts mid-sheet,
+    so zones look forward). Rows after every subtotal get "", like AKAM's equity and
+    non-current rows. Lines are keyed on (section, label): the same label can appear
+    in both a current and a non-current position. Adds section_source."""
+    known = {nospace(k.split(" > ")[0]) for k in cm if " > " in k}
+    lines = list(dict.fromkeys(zip(cells["section"], cells["label"])))
+    idx = {line: i for i, line in enumerate(lines)}
+    pos = {}
+    for s, l in lines:
+        pos.setdefault(nospace(l), idx[(s, l)])
+
+    def zone(line):
+        for total, sec in BS_ZONES:
+            if total in pos and idx[line] <= pos[total]:
+                return sec
+        return ""
+
+    keep = cells["section"].map(lambda s: nospace(s) in known)
+    cells["section"] = [s if k else zone((s, l)) for s, l, k
+                        in zip(cells["section"], cells["label"], keep)]
+    cells["section_source"] = keep.map({True: "extracted", False: "inferred"})
+    return cells
+
+
 def validate(stem, m, facts, curated, lab2con):
     out = []
     for path, folder in PATHS.items():
         for kind in STATEMENTS:
+            allowed = set(facts.loc[facts["instant"] == (kind == "balance_sheet"), "concept"])
+            lab2con_k = {lab: c for lab, c in lab2con.items() if c in allowed}
             f = folder / f"{stem}_{kind}.cells.csv"
             if not f.exists():
                 out.append({"stem": stem, "path": path, "statement": kind, "status": "no_table"})
                 continue
             cells = pd.read_csv(f, dtype={"section": str, "label": str, "period": str}).fillna(
                 {"section": "", "label": ""})
+            if kind == "balance_sheet":
+                cells = infer_sections(cells, curated.get(kind, {}) or {})
+            else:
+                cells["section_source"] = "extracted"
             periods = list(dict.fromkeys(cells["period"]))
             for (sec, lab), g in cells.groupby(["section", "label"], sort=False):
-                cands = map_label(kind, sec, lab, curated, lab2con)
+                cands = map_label(kind, sec, lab, curated, lab2con_k)
                 target, method = cands[0] if cands else (None, "unmapped")
                 for t, meth in cands:  # first candidate the filing actually tagged
                     c_, m_ = parse_target(t)
@@ -195,9 +258,13 @@ def validate(stem, m, facts, curated, lab2con):
                                      m["form"]) if concept else None
                     xv = None if fact is None else fact["value"]
                     pv = None if pd.isna(c["value"]) else float(c["value"])
+                    raw = str(c["raw"])
+                    if pv is not None and pv > 0 and raw.startswith("(") and ")" not in raw:
+                        pv = -pv  # clipped ")": the PDF shows the value in parentheses
                     st = compare(pv, xv, None if fact is None else fact["decimals"])
                     cause = "" if st == "match" else CAUSE.get(st.split("_x")[0], "")
                     out.append({"stem": stem, "path": path, "statement": kind, "section": sec,
+                                "section_source": c["section_source"],
                                 "label": lab, "period": c["period"], "raw": c["raw"],
                                 "pdf_value": pv, "concept": target or "", "method": method,
                                 "xbrl_value": xv, "status": st, "suggested_cause": cause})
