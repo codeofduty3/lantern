@@ -107,6 +107,25 @@ dvc remote list          # storage  s3://damg7245-codeofduty3/lantern (default)
 dvc pull                 # anonymous read
 ```
 
+To *push*, two one-time local steps are required. The committed
+`allow_anonymous_login = true` is what lets graders read without credentials, but it also
+makes DVC sign writes anonymously, so publishing fails with `Access Denied` until each
+pusher overrides it locally (the override is written to `.dvc/config.local`, which is
+gitignored, so it never reaches the repo):
+
+```bash
+dvc remote modify --local storage allow_anonymous_login false
+dvc push
+```
+
+If your credentials come from `aws login` (`login_session` in `~/.aws/config`), boto3 also
+needs the CRT extra inside the venv or the push stops with
+`Missing Dependency: ... pip install "botocore[crt]"`:
+
+```bash
+pip install "botocore[crt]"
+```
+
 ## Expected run times (CPU, from reports/benchmarks.md)
 
 | Stage | Time for both filings |
