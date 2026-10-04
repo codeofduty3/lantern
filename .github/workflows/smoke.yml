@@ -1,0 +1,47 @@
+name: smoke
+
+# Part 8 - fast, offline check that runs on every pull request.
+#
+# No EDGAR download, no DVC remote, no cloud credentials: the text and table stages run
+# against the committed fixtures in tests/fixtures/ and the regression suite follows.
+# Both stages take their inputs and outputs on the command line, so the job never reads
+# data/ or touches the network.
+
+on:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+          cache-dependency-path: requirements-ci.txt
+
+      # Tesseract is the OCR engine the scanned fixture exercises in parse_text.
+      # Camelot renders pages with the pypdfium2 wheel, so Poppler is only a fallback
+      # and Ghostscript is not required.
+      - name: System packages
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends tesseract-ocr poppler-utils
+
+      - name: Python dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements-ci.txt
+
+      - name: Text stage on fixtures
+        run: python src/parse_text.py --input tests/fixtures --out "$RUNNER_TEMP/parsed"
+
+      - name: Table stage on fixtures
+        run: python src/tables.py --input tests/fixtures --out "$RUNNER_TEMP/tables"
+
+      - name: Regression tests
+        run: pytest -q
