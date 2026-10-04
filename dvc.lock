@@ -354,8 +354,8 @@ stages:
     deps:
     - path: data/docling
       hash: md5
-      md5: 1209e29a2d0b4fd5bb02c81ff7a9e089.dir
-      size: 15407467
+      md5: c4db209f8371565d60c5e414962443ec.dir
+      size: 15407468
       nfiles: 648
     - path: data/export
       hash: md5
@@ -364,9 +364,9 @@ stages:
       nfiles: 7
     - path: data/ground_truth
       hash: md5
-      md5: 31648f55443ffab96cd2923fa159720c.dir
-      size: 18
-      nfiles: 1
+      md5: 156d2423497d06977b88f4bd45ea795e.dir
+      size: 3256
+      nfiles: 3
     - path: data/parsed
       hash: md5
       md5: 28a7a794df11b0e1e66e8b14d8178a37.dir
@@ -374,13 +374,13 @@ stages:
       nfiles: 171
     - path: data/tables
       hash: md5
-      md5: 2d142c41b428548d95486c4a4bb97c6f.dir
+      md5: 221a975af3ce214c9ae0fbcc71e1fe6e.dir
       size: 671318
       nfiles: 310
     - path: data/xbrl
       hash: md5
-      md5: e91c5b4eb34e3569a6cd01e4a40c21c4.dir
-      size: 529935
+      md5: 0ad95482750d5309782ffd40f2fd7220.dir
+      size: 530385
       nfiles: 2
     - path: src/evaluate.py
       hash: md5
@@ -392,9 +392,9 @@ stages:
       size: 18492
     - path: tests/fixtures/gt
       hash: md5
-      md5: a294d9bc9e6df1ddf490238f796ea2ee.dir
-      size: 1145
-      nfiles: 1
+      md5: d8b785ab80213a500aec250274053538.dir
+      size: 2740
+      nfiles: 2
     params:
       params.yaml:
         evaluate:
@@ -402,8 +402,8 @@ stages:
     outs:
     - path: reports/metrics.json
       hash: md5
-      md5: caad28cbd5664f011769d28bc2975602
-      size: 581
+      md5: 19a278dc6f3f564834552908e764a208
+      size: 674
     - path: reports/plots/drift.png
       hash: md5
       md5: d499e59e47ce1881970e4030787bfecc

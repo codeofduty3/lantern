@@ -17,3 +17,10 @@ Tables (`<stem>_p<N>_t<K>.gt.csv`)
   after a Total line; `label` as printed without footnote markers.
 - Values exactly as printed, unscaled: `416,161`, `(321)`, `—`, `6.08`. Omit `$`.
 - Heading-only rows (no numbers) are not rows.
+
+Statement tables (AKAM 10-K income statement and balance sheet)
+- Taken from the filing's original iXBRL HTML (the document the PDF was rendered
+  from), not from any pipeline output (data/tables, data/docling, data/parsed,
+  data/export, data/layout) and not extracted from the rendered PDF with code.
+- Values as printed in the HTML (commas, parentheses, em dash; no `$`), unscaled.
+- Then verified line by line against the rendered PDF pages.
