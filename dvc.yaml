@@ -23,7 +23,7 @@ stages:
     cmd: python src/layout.py --input data/rendered tests/fixtures --out data/layout
     deps: [src/layout.py, src/tables.py, src/parse_text.py, src/common.py, data/rendered, tests/fixtures]
     params: [layout, ocr, tables]
-    outs: [data/layout, data/figures]
+    outs: [data/layout, data/figures, data/models]
   parse_docling:
     cmd: python src/docling_parse.py
     deps: [src/docling_parse.py, src/tables.py, src/common.py, data/rendered, data/raw, tests/fixtures]

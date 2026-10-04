@@ -69,6 +69,38 @@ def rel(path) -> str:
         return str(path)
 
 
+def ensure_file(url: str, dest, digest: str = None, label: str = "") -> Path:
+    """Download `url` to `dest` once, atomically, verifying `digest` when given.
+
+    Refuses HTML responses: hosts like Dropbox answer a removed file with a 200 HTML
+    page, which torch would later fail to unpickle with a confusing error.
+    """
+    dest = Path(dest)
+    if dest.exists() and (not digest or sha256(dest) == digest):
+        return dest
+    import requests
+    dest.parent.mkdir(parents=True, exist_ok=True)
+    part = dest.with_name(dest.name + ".part")
+    name = label or dest.name
+    print(f"{name}: downloading {url}")
+    with requests.get(url, stream=True, timeout=120) as r:
+        r.raise_for_status()
+        ctype = r.headers.get("content-type", "")
+        if "html" in ctype.lower():
+            raise RuntimeError(f"{name}: {url} returned {ctype}, not a file "
+                               "(the host may have removed it)")
+        with open(part, "wb") as f:
+            for chunk in r.iter_content(1 << 20):
+                f.write(chunk)
+    got = sha256(part)
+    if digest and got != digest:
+        part.unlink(missing_ok=True)
+        raise RuntimeError(f"{name}: sha256 {got} does not match the pinned {digest}")
+    part.replace(dest)
+    print(f"{name}: saved {rel(dest)} ({dest.stat().st_size / 1e6:.1f} MB)")
+    return dest
+
+
 def setup_tesseract():
     """Honour TESSERACT_CMD (needed on Windows if tesseract is not on PATH)."""
     import pytesseract

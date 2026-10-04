@@ -24,3 +24,13 @@ torchvision
 docling
 arelle-release
 boto3
+
+# --- Intel macOS (x86_64) only ---------------------------------------------
+# The newest PyTorch wheel for Intel Macs is 2.2.2: its C extension is built against
+# NumPy 1.x (numpy 2 disables the torch<->numpy bridge) and it has no
+# torch.serialization.safe_globals (added in 2.6). opencv 5 requires numpy>=2 and
+# transformers 5 requires torch>=2.4, so both are held back for this platform only.
+numpy<2; sys_platform == "darwin" and platform_machine == "x86_64"
+opencv-python<5; sys_platform == "darwin" and platform_machine == "x86_64"
+opencv-python-headless<5; sys_platform == "darwin" and platform_machine == "x86_64"
+transformers<5; sys_platform == "darwin" and platform_machine == "x86_64"

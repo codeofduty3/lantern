@@ -69,6 +69,12 @@ System packages: Tesseract (`brew install tesseract` / `apt install tesseract-oc
 (`brew install poppler` / `apt install poppler-utils`). Camelot >= 1.0 renders with pypdfium2,
 so Ghostscript is not required.
 
+The layout stage fetches its detector weights into `data/models/` on first run from the
+pinned URL in `params.yaml` (layoutparser's own catalog points at deleted Dropbox files) and
+checks the sha256 before use. On Intel macOS the newest PyTorch wheel is 2.2.2, which needs
+the NumPy 1.x ABI, so `requirements.txt` holds `numpy`, `opencv-python` and `transformers`
+back for `darwin`/`x86_64` only; on other platforms the normal versions apply.
+
 ```bash
 python3.11 -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt
@@ -97,7 +103,7 @@ credentials (`allow_anonymous_login`). Team members push with their own AWS cred
 the environment (never committed).
 
 ```bash
-dvc remote list          # storage  s3://<bucket>/lantern
+dvc remote list          # storage  s3://damg7245-codeofduty3/lantern (default)
 dvc pull                 # anonymous read
 ```
 
