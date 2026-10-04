@@ -27,7 +27,7 @@ from common import (DOCLING, FIXTURES, RENDERED, ROOT, list_pdfs, load_manifest,
 from tables import clean_table, page_caption
 
 
-def converter(ocr: bool, mode: str):
+def converter(ocr: bool, mode: str, backend: str = "docling_parse"):
     from docling.datamodel.base_models import InputFormat
     from docling.datamodel.pipeline_options import (PdfPipelineOptions, TableFormerMode,
                                                     TesseractCliOcrOptions)
@@ -37,7 +37,15 @@ def converter(ocr: bool, mode: str):
         else TableFormerMode.FAST
     if ocr:
         opts.ocr_options = TesseractCliOcrOptions(lang=["eng"], force_full_page_ocr=True)
-    return DocumentConverter(format_options={InputFormat.PDF: PdfFormatOption(pipeline_options=opts)})
+    # docling_parse (the default backend) segfaults in its native parser on the rasterized
+    # scanned fixture on Intel macOS; pypdfium2 reads the same file. See
+    # docling.scanned_backend in params.yaml.
+    kwargs = {}
+    if backend == "pypdfium2":
+        from docling.backend.pypdfium2_backend import PyPdfiumDocumentBackend
+        kwargs["backend"] = PyPdfiumDocumentBackend
+    fmt = PdfFormatOption(pipeline_options=opts, **kwargs)
+    return DocumentConverter(format_options={InputFormat.PDF: fmt})
 
 
 def table_grid(t, doc) -> pd.DataFrame:
@@ -106,7 +114,8 @@ def main():
         stem = pdf_path.stem
         scanned = stem == "scanned"
         if scanned and conv_ocr is None:
-            conv_ocr = converter(True, cfg["table_mode"])
+            conv_ocr = converter(True, cfg["table_mode"],
+                                 cfg.get("scanned_backend", "pypdfium2"))
         t0 = time.perf_counter()
         doc = (conv_ocr if scanned else conv).convert(str(pdf_path)).document
         secs = time.perf_counter() - t0

@@ -42,6 +42,9 @@ layout:
 docling:
   html_stem: AKAM_10K_20241231     # filing whose iXBRL HTML is also converted
   table_mode: accurate
+  scanned_backend: pypdfium2       # docling_parse (the default) segfaults on the rasterized
+                                   # scanned fixture on Intel macOS; set to docling_parse
+                                   # on a platform where the default backend works
 
 managed:
   enabled: false                    # default: read cache only, never call the API
