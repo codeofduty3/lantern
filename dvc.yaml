@@ -25,8 +25,8 @@ stages:
     params: [layout, ocr, tables]
     outs: [data/layout, data/figures, data/models]
   parse_docling:
-    cmd: python src/docling_parse.py
-    deps: [src/docling_parse.py, src/tables.py, src/common.py, data/rendered, data/raw, tests/fixtures]
+    cmd: python src/parse_docling.py
+    deps: [src/parse_docling.py, src/tables.py, src/common.py, data/rendered, data/raw, tests/fixtures]
     params: [docling]
     outs: [data/docling]
   export:

@@ -21,16 +21,25 @@ layoutparser
 effdet
 torch
 torchvision
-docling
+# Docling parsing stack, pinned to the versions the pipeline currently runs with so the
+# layout/table/OCR output (and therefore DVC hashes) stays stable across installs.
+# transformers is pinned because Docling's saved layout model (docling-layout-heron) ships
+# the "slow" RTDetrImageProcessor; an unpinned upgrade can flip use_fast and shift outputs.
+docling==2.132.0
+docling-slim==2.132.0
+docling-parse==7.22.1
+docling-core==2.99.0
+docling-ibm-models==4.0.3
+transformers==4.57.6
 arelle-release
 boto3
 
 # --- Intel macOS (x86_64) only ---------------------------------------------
 # The newest PyTorch wheel for Intel Macs is 2.2.2: its C extension is built against
 # NumPy 1.x (numpy 2 disables the torch<->numpy bridge) and it has no
-# torch.serialization.safe_globals (added in 2.6). opencv 5 requires numpy>=2 and
-# transformers 5 requires torch>=2.4, so both are held back for this platform only.
+# torch.serialization.safe_globals (added in 2.6), so opencv 5 (numpy>=2) is held back
+# on this platform. transformers is pinned exactly in the list above, which already
+# satisfies its old `transformers<5` constraint here.
 numpy<2; sys_platform == "darwin" and platform_machine == "x86_64"
 opencv-python<5; sys_platform == "darwin" and platform_machine == "x86_64"
 opencv-python-headless<5; sys_platform == "darwin" and platform_machine == "x86_64"
-transformers<5; sys_platform == "darwin" and platform_machine == "x86_64"

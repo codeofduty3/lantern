@@ -18,9 +18,6 @@ from pathlib import Path
 import pandas as pd
 import pdfplumber
 
-_src = Path(__file__).resolve().parent
-sys.path[:] = [p for p in sys.path if Path(p or ".").resolve() != _src]
-# import docling_parse.pdf_parser  # noqa: F401  (the library, not this file)
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from common import (DOCLING, FIXTURES, RENDERED, ROOT, list_pdfs, load_manifest, load_params,
                     statement_kind)

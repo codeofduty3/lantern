@@ -38,7 +38,7 @@ flowchart LR
 | parse_pdfplumber | `src/parse_text.py` | `data/parsed/{stem}_p{NNNN}.txt`, `{stem}.words.jsonl`, `ocr_log.csv` |
 | tables | `src/tables.py` | `data/tables/*.raw.csv / *.cells.csv / *.clean.csv`, `tables_log.csv` |
 | layout | `src/layout.py` | `data/layout/{stem}.blocks.jsonl`, `data/figures/` |
-| parse_docling | `src/docling_parse.py` | `data/docling/` (md, json, per-page md, tables, prov) |
+| parse_docling | `src/parse_docling.py` | `data/docling/` (md, json, per-page md, tables, prov) |
 | export | `src/export.py` | `data/export/{stem}.jsonl/.md/.txt` |
 | xbrl | `src/xbrl.py` | `data/xbrl/facts.csv`, `comparison.csv` |
 | evaluate | `src/evaluate.py` | `reports/metrics.json`, `reports/eval.md`, `reports/plots/drift.png` |
@@ -51,7 +51,7 @@ flowchart LR
 | 1 Text + OCR | `src/parse_text.py` | `data/parsed/`, OCR thresholds in `params.yaml` (ocr) |
 | 2 Tables | `src/tables.py`, `src/bakeoff.py` | `reports/tables_method.md`, `reports/handcheck/` |
 | 3 Layout | `src/layout.py` | `reports/layout/`, `reports/layout_audit.md` (+ `.csv`) |
-| 4 Docling | `src/docling_parse.py` | `reports/docling_comparison.md` |
+| 4 Docling | `src/parse_docling.py` | `reports/docling_comparison.md` |
 | 5 Metadata | `src/schema.py`, `src/export.py` | `data/export/{stem}.jsonl`, `.md` |
 | 6 Formats | `src/export.py` | `reports/format_decision.md` |
 | 7 Build vs buy | `src/managed/` | `reports/build_vs_buy.md`, `data/managed.dvc` |

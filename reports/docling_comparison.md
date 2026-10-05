@@ -6,7 +6,7 @@
 | WER (mean) | - | - | eval.md |
 | CER (mean) | - | - | eval.md |
 | numeric accuracy | - | - | eval.md |
-| table cell F1 | 0.947 | 1.000 | eval.md |
+| table cell F1 | 0.950 | 1.000 | eval.md |
 | XBRL match rate | 0.891 | 0.922 | xbrl.md |
 | s/page p50 | - (text) / - (tables) / - (layout) | - | benchmarks.md |
 | provenance | page + bbox per block (layout) | page + bbox per item (prov.jsonl, normalized to top-left) | data/export, data/docling |
@@ -15,9 +15,9 @@ Rendered PDF vs original iXBRL HTML (Docling), data/docling/html_vs_pdf.csv:
 
 | metric         |   rendered_pdf | original_html           |
 |:---------------|---------------:|:------------------------|
-| tables         |             81 | 89                      |
-| numeric_cells  |           1619 | 5259                    |
-| markdown_chars |         493654 | 1012328                 |
+| tables         |             82 | 89                      |
+| numeric_cells  |           1621 | 5255                    |
+| markdown_chars |         492985 | 1012018                 |
 | pages          |             97 | n/a (HTML has no pages) |
 <!-- AUTO:END -->
 
