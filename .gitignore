@@ -30,6 +30,9 @@ data/*
 !data/*.dvc
 !data/.gitignore
 
+# OCR calibration drafts: keep the notes and README, ignore the copied text dumps
+reports/ocr_calibration_drafts/*.txt
+
 # DVC / caching leftovers
 .dvc/cache/
 .dvc/tmp/
