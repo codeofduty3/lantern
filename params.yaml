@@ -30,7 +30,10 @@ tables:
   managed_below_score: 60           # managed fallback if best quality score is lower
 
 layout:
-  model: "lp://efficientdet/PubLayNet"
+  model: "lp://efficientdet/PubLayNet"   # config + label map only; weights come from the URL below
+  weights: data/models/publaynet-tf_efficientdet_d0.pth.tar
+  weights_url: "https://huggingface.co/ClosedUni/publaynet-tf_efficientdet/resolve/main/publaynet-tf_efficientdet_d0.pth.tar"
+  weights_sha256: "532824ec221bdb7e10e8d497ffc407959ed76fc175c15ffa1d4d397fbff5297e"
   score_threshold: 0.3
   pad_pt: 8                         # padding added to Table boxes before Camelot
   dpi: 150
@@ -39,6 +42,9 @@ layout:
 docling:
   html_stem: AKAM_10K_20241231     # filing whose iXBRL HTML is also converted
   table_mode: accurate
+  scanned_backend: pypdfium2       # docling_parse (the default) segfaults on the rasterized
+                                   # scanned fixture on Intel macOS; set to docling_parse
+                                   # on a platform where the default backend works
 
 managed:
   enabled: false                    # default: read cache only, never call the API

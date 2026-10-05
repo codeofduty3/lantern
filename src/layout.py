@@ -17,6 +17,7 @@ import argparse
 import csv
 import json
 import sys
+from contextlib import contextmanager
 from importlib.metadata import version
 from pathlib import Path
 
@@ -24,8 +25,8 @@ import pdfplumber
 from PIL import ImageDraw
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from common import (FIGURES, LAYOUT, RENDERED, REPORTS, FIXTURES, list_pdfs, load_manifest,
-                    load_params, numbers, statement_kind, write_report)
+from common import (FIGURES, LAYOUT, RENDERED, REPORTS, ROOT, FIXTURES, ensure_file, list_pdfs,
+                    load_manifest, load_params, numbers, statement_kind, write_report)
 from parse_text import ocr_image
 from tables import clean_table, extract_best, page_caption, scale_from_caption
 
@@ -34,19 +35,69 @@ CLASSES = list(COLORS)
 AUDIT_CSV = REPORTS / "layout_audit.csv"
 
 
-def load_model(name):
+@contextmanager
+def trusted_checkpoint():
+    """Unpickle the pinned layout checkpoint with weights_only=False.
+
+    effdet loads it through timm.load_checkpoint() -> timm.load_state_dict(), where timm
+    >= 1.0 hard-codes weights_only=True and its safe_globals() escape hatch landed only
+    in torch 2.4 (the newest torch with an Intel-macOS wheel is 2.2.2, so timm's hasattr
+    check fails there). Older timm does not pass weights_only at all. The checkpoint
+    comes from a pinned, sha256-verified URL, so full unpickling is safe here.
+    """
+    import importlib
+    import inspect
+    helpers = None
+    for module in ("timm.models._helpers", "timm.models.helpers"):  # >=1.0, <1.0
+        try:
+            helpers = importlib.import_module(module)
+            break
+        except ImportError:
+            continue
+    if helpers is None or "weights_only" not in inspect.signature(
+            helpers.load_state_dict).parameters:
+        yield  # older timm unpickles normally; nothing to override
+        return
+    original = helpers.load_state_dict
+
+    def patched(*args, **kwargs):
+        kwargs["weights_only"] = False
+        return original(*args, **kwargs)
+
+    helpers.load_state_dict = patched
+    try:
+        yield
+    finally:
+        helpers.load_state_dict = original
+
+
+def load_model(cfg):
+    """Build the PubLayNet detector from the pinned checkpoint.
+
+    cfg["model"] (lp://efficientdet/PubLayNet) only supplies the architecture config and
+    label map: the Dropbox weights layoutparser's catalog points at were deleted, so
+    PathManager now downloads an HTML error page. Fetch cfg["weights_url"] into
+    cfg["weights"] instead and verify it against cfg["weights_sha256"].
+    """
     import argparse
+    import contextlib
     import numpy as np
     import torch
     import layoutparser as lp
 
-    # PyTorch >= 2.6 only unpickles allowlisted types; the PubLayNet
-    # EfficientDet checkpoint also stores these objects. Trusted source.
+    weights = ensure_file(cfg["weights_url"], ROOT / cfg["weights"],
+                          cfg.get("weights_sha256"), label="layout weights")
+
+    # torch >= 2.6 unpickles only allowlisted types by default (safe_globals itself
+    # exists from 2.4) and this checkpoint stores argparse.Namespace / numpy scalars.
+    # Keep the allowlist for the normal path; trusted_checkpoint() covers older torch.
     safe = [argparse.Namespace, np.dtype,
             (np.core.multiarray.scalar, "numpy.core.multiarray.scalar")]
     safe += [type(np.dtype(t)) for t in ("float32", "float64", "int32", "int64", "bool")]
-    with torch.serialization.safe_globals(safe):
-        return lp.AutoLayoutModel(name)
+    allow = (torch.serialization.safe_globals(safe)
+             if hasattr(torch.serialization, "safe_globals") else contextlib.nullcontext())
+    with allow, trusted_checkpoint():
+        return lp.EfficientDetLayoutModel(cfg["model"], model_path=str(weights))
 
 
 def detect(model, page, dpi, thr):
@@ -209,7 +260,7 @@ def main():
     a = ap.parse_args()
     P = load_params()
     cfg, ocfg, tcfg = P["layout"], P["ocr"], P["tables"]
-    model = load_model(cfg["model"])
+    model = load_model(cfg)
     import pytesseract
     versions = {"layoutparser": f"layoutparser {version('layoutparser')}",
                 "pdfplumber": f"pdfplumber {version('pdfplumber')}",

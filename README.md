@@ -38,7 +38,7 @@ flowchart LR
 | parse_pdfplumber | `src/parse_text.py` | `data/parsed/{stem}_p{NNNN}.txt`, `{stem}.words.jsonl`, `ocr_log.csv` |
 | tables | `src/tables.py` | `data/tables/*.raw.csv / *.cells.csv / *.clean.csv`, `tables_log.csv` |
 | layout | `src/layout.py` | `data/layout/{stem}.blocks.jsonl`, `data/figures/` |
-| parse_docling | `src/docling_parse.py` | `data/docling/` (md, json, per-page md, tables, prov) |
+| parse_docling | `src/parse_docling.py` | `data/docling/` (md, json, per-page md, tables, prov) |
 | export | `src/export.py` | `data/export/{stem}.jsonl/.md/.txt` |
 | xbrl | `src/xbrl.py` | `data/xbrl/facts.csv`, `comparison.csv` |
 | evaluate | `src/evaluate.py` | `reports/metrics.json`, `reports/eval.md`, `reports/plots/drift.png` |
@@ -51,7 +51,7 @@ flowchart LR
 | 1 Text + OCR | `src/parse_text.py` | `data/parsed/`, OCR thresholds in `params.yaml` (ocr) |
 | 2 Tables | `src/tables.py`, `src/bakeoff.py` | `reports/tables_method.md`, `reports/handcheck/` |
 | 3 Layout | `src/layout.py` | `reports/layout/`, `reports/layout_audit.md` (+ `.csv`) |
-| 4 Docling | `src/docling_parse.py` | `reports/docling_comparison.md` |
+| 4 Docling | `src/parse_docling.py` | `reports/docling_comparison.md` |
 | 5 Metadata | `src/schema.py`, `src/export.py` | `data/export/{stem}.jsonl`, `.md` |
 | 6 Formats | `src/export.py` | `reports/format_decision.md` |
 | 7 Build vs buy | `src/managed/` | `reports/build_vs_buy.md`, `data/managed.dvc` |
@@ -68,6 +68,12 @@ Discussion section written by the team, which the scripts never touch.
 System packages: Tesseract (`brew install tesseract` / `apt install tesseract-ocr`), Poppler
 (`brew install poppler` / `apt install poppler-utils`). Camelot >= 1.0 renders with pypdfium2,
 so Ghostscript is not required.
+
+The layout stage fetches its detector weights into `data/models/` on first run from the
+pinned URL in `params.yaml` (layoutparser's own catalog points at deleted Dropbox files) and
+checks the sha256 before use. On Intel macOS the newest PyTorch wheel is 2.2.2, which needs
+the NumPy 1.x ABI, so `requirements.txt` holds `numpy`, `opencv-python` and `transformers`
+back for `darwin`/`x86_64` only; on other platforms the normal versions apply.
 
 ```bash
 python3.11 -m venv .venv && source .venv/bin/activate
@@ -97,8 +103,27 @@ credentials (`allow_anonymous_login`). Team members push with their own AWS cred
 the environment (never committed).
 
 ```bash
-dvc remote list          # storage  s3://<bucket>/lantern
+dvc remote list          # storage  s3://damg7245-codeofduty3/lantern (default)
 dvc pull                 # anonymous read
+```
+
+To *push*, two one-time local steps are required. The committed
+`allow_anonymous_login = true` is what lets graders read without credentials, but it also
+makes DVC sign writes anonymously, so publishing fails with `Access Denied` until each
+pusher overrides it locally (the override is written to `.dvc/config.local`, which is
+gitignored, so it never reaches the repo):
+
+```bash
+dvc remote modify --local storage allow_anonymous_login false
+dvc push
+```
+
+If your credentials come from `aws login` (`login_session` in `~/.aws/config`), boto3 also
+needs the CRT extra inside the venv or the push stops with
+`Missing Dependency: ... pip install "botocore[crt]"`:
+
+```bash
+pip install "botocore[crt]"
 ```
 
 ## Expected run times (CPU, from reports/benchmarks.md)

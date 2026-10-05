@@ -1,10 +1,16 @@
-# CI smoke test: text + table stages and pytest on committed fixtures only
+# CI smoke test: text + table stages and pytest on the committed fixtures only.
+# No EDGAR, no DVC remote, no cloud credentials, and deliberately no torch/docling -
+# the layout and docling stages stay out of the fast path.
+#
+# numpy/opencv are held on the 1.x/4.x line so CI matches the environment the pipeline
+# was verified in; CI has no torch, so this is reproducibility rather than an ABI need.
+numpy<2
+opencv-python-headless<5
 pdfplumber>=0.11
 pypdfium2
 pytesseract
 pillow
 camelot-py>=1.0
-opencv-python-headless
 pandas
 tabulate
 matplotlib

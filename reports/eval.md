@@ -13,14 +13,10 @@ No ground-truth pages yet.
 
 ## Tables (cell precision / recall / F1)
 
-| table                           | path        |   gold |   pred |   precision |   recall |     f1 |   value_recall |
-|:--------------------------------|:------------|-------:|-------:|------------:|---------:|-------:|---------------:|
-| AKAM_10K_20241231_p52_t1.gt.csv | traditional |     68 |     68 |      0.9412 |   0.9412 | 0.9412 |              1 |
-| AKAM_10K_20241231_p52_t1.gt.csv | docling     |     68 |     68 |      1      |   1      | 1      |              1 |
-| AKAM_10K_20241231_p53_t1.gt.csv | traditional |     60 |     60 |      0.95   |   0.95   | 0.95   |              1 |
-| AKAM_10K_20241231_p53_t1.gt.csv | docling     |     60 |     60 |      1      |   1      | 1      |              1 |
-| statement_p1_t1.gt.csv          | traditional |     60 |     60 |      0.95   |   0.95   | 0.95   |              1 |
-| statement_p1_t1.gt.csv          | docling     |     60 |     60 |      1      |   1      | 1      |              1 |
+| table                  | path        |   gold |   pred |   precision |   recall |   f1 |   value_recall |
+|:-----------------------|:------------|-------:|-------:|------------:|---------:|-----:|---------------:|
+| statement_p1_t1.gt.csv | traditional |     60 |     60 |        0.95 |     0.95 | 0.95 |              1 |
+| statement_p1_t1.gt.csv | docling     |     60 |     60 |        1    |     1    | 1    |              1 |
 
 ## Corpus metrics (reports/metrics.json)
 
@@ -40,9 +36,9 @@ No ground-truth pages yet.
   },
   "tables": {
     "traditional": {
-      "precision": 0.9468085106382979,
-      "recall": 0.9468085106382979,
-      "f1": 0.9468085106382979,
+      "precision": 0.95,
+      "recall": 0.95,
+      "f1": 0.9500000000000001,
       "value_recall": 1.0
     },
     "docling": {
