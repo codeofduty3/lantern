@@ -12,13 +12,13 @@ render:
   page_format: Letter
   timeout_ms: 180000
 
-ocr:                                # thresholds justified in Exercise 1a
-  min_chars: 100                    # signal 1: fewer non-space chars -> "empty"
-  junk_ratio: 0.2                   # signal 2: junk-token share -> "garbled"
-  image_area: 0.6                   # signal 3: raster coverage -> "image"
-  dpi: 300                          # Exercise 1b knee: 200; 300 for statement safety margin
+ocr:                                # AKAM calibration: reports/ocr_calibration.md
+  min_chars: 100                    # provisional cutoff inside observed 1-to-334 char gap
+  junk_ratio: 0.2                   # provisional; no labeled garbled text-layer pages
+  image_area: 0.6                   # separates observed native pages (0) from scans (1)
+  dpi: 200                          # lowest mean WER and full numeric accuracy in DPI sweep
   config: "--oem 1 --psm 6"
-  managed_below_conf: 70            # managed fallback if mean OCR conf is lower
+  managed_below_conf: 70            # provisional; tested Tesseract confidences all exceed 70
 
 tables:
   min_rulings: 6                    # >= ruling lines -> lattice tried first
