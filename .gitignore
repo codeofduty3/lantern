@@ -22,17 +22,13 @@ htmlcov/
 
 # Generated project data and outputs
 # Keep the source repo clean; these are produced by the pipeline.
-# Git tracks files, not directories, so an empty folder cannot be committed. These
-# rules ignore everything *inside* data/ and reports/ except the .gitkeep files that
-# hold the folder skeleton open -- a blanket `data/` would hide the .gitkeep too.
-# Note: `dvc repro` deletes a stage's output directory, so placeholders belong only in
-# directories DVC does not manage (data/bench, data/managed, data/ground_truth).
-data/**
-!data/**/
-!data/**/.gitkeep
-reports/**
-!reports/**/
-!reports/**/.gitkeep
+# data stays ignored via data/* plus the DVC-maintained data/.gitignore;
+# .dvc pointer files must reach Git (Part 8), so they are re-included.
+# reports/ is Git-tracked: its only DVC outputs (metrics.json, plots/drift.png)
+# are declared cache: false in dvc.yaml, i.e. versioned by Git on purpose.
+data/*
+!data/*.dvc
+!data/.gitignore
 
 # DVC / caching leftovers
 .dvc/cache/

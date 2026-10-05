@@ -176,8 +176,9 @@ with the same line in the 10-K.
 ### 4. Every remaining non-match
 
 Values are as printed, in thousands of dollars; periods are collapsed per line.
-Causes are the confirmed diagnoses from xbrl_review.csv, with the assignment's cause
-type and the fix made or the owner of the open fix.
+Each cause was confirmed by checking the line against the rendered PDF pages (10-K pages
+52–53, 10-Q pages 4–6), with the assignment's cause type and the fix made or the
+pipeline stage where the open fix belongs.
 
 | Path | PDF label | Concept | PDF value | XBRL value | Status | Mapping | Diagnosed cause / fix |
 |---|---|---|---|---|---|---|---|
@@ -185,16 +186,14 @@ type and the fix made or the owner of the open fix.
 | both | other expense, net (10-K 2022–2024) | OtherNonoperatingExpenseNet | −19,561 / −12,296 / −10,433 | same, positive | sign | manual | sign convention — as above |
 | both | provision for income taxes (10-K: 3; 10-Q: 4 periods) | IncomeTaxExpenseBenefit | −82,095 … −15,899 | same, positive | sign | manual | sign convention — as above |
 | both | treasury stock, at cost… (10-K 2024) | TreasuryStockCommonValue | −558,488 | 558,488 | sign | manual | sign convention — as above |
-| traditional | at december 31, 2023 (10-K, 2 periods) | — | 1,556 / 1,512 | — | xbrl_missing | unmapped | wrapped label (table structure): last line of the wrapped common stock caption; the suffix rule correctly refuses it because two captions end this way; fix owner: Kahan (join wrapped labels in the tables stage) |
-| traditional | rating leas e liabi lities (10-Q, 2 periods) | OperatingLeaseLiabilityCurrent | 846,619 / 829,660 | 281,347 / 259,134 | mismatch | suffix | Table structure + mapping: first letters clipped, and the filing uses the same caption, "Operating lease liabilities", for both the current and non-current lines, so the clipped label maps to the current concept. Root cause in the tables stage (Kahan); documented limitation. |
-| traditional | common stock, $0.01 par value… (10-Q 2025) | CommonStockValue | 1,437,674 | 1,591 | mismatch | manual | wrapped label (table structure): the wrapped caption corrupted the value cell; fix owner: Kahan |
-| traditional | outstandin g at d ecember 31, 20 (10-Q, 2 periods) | — | 24 / 1,556 | — | xbrl_missing | unmapped | wrapped label (table structure): continuation line of the common stock caption; fix owner: Kahan |
+| traditional | at december 31, 2023 (10-K, 2 periods) | — | 1,556 / 1,512 | — | xbrl_missing | unmapped | wrapped label (table structure): last line of the wrapped common stock caption; the suffix rule correctly refuses it because two captions end this way; fix: join wrapped labels in the tables stage (Part 2) |
+| traditional | rating leas e liabi lities (10-Q, 2 periods) | OperatingLeaseLiabilityCurrent | 846,619 / 829,660 | 281,347 / 259,134 | mismatch | suffix | table structure + mapping: first letters clipped, and the filing uses the same caption, "Operating lease liabilities", for both the current and non-current lines, so the clipped label maps to the current concept. root cause in the tables stage (Part 2); documented limitation. |
+| traditional | common stock, $0.01 par value… (10-Q 2025) | CommonStockValue | 1,437,674 | 1,591 | mismatch | manual | wrapped label (table structure): the wrapped caption corrupted the value cell; fix: tables stage (Part 2) |
+| traditional | outstandin g at d ecember 31, 20 (10-Q, 2 periods) | — | 24 / 1,556 | — | xbrl_missing | unmapped | wrapped label (table structure): continuation line of the common stock caption; fix: tables stage (Part 2) |
 | traditional | treasury s tock, at cost… (10-Q 2025) | TreasuryStockCommonValue | −1,335,236 | 1,335,236 | sign | fuzzy | sign convention — as above |
-| traditional | treasury s tock, at cost… (10-Q 2024) | TreasuryStockCommonValue | −558,488 | 558,488 | sign | fuzzy | Sign convention (normalization): shown in parentheses, stored positive in XBRL. Raw "(558,488" had a clipped ")"; it matched only by accident before the parenthesis fix and now shows the same convention as the 2025 column and the 10-K. Policy, not an error. |
+| traditional | treasury s tock, at cost… (10-Q 2024) | TreasuryStockCommonValue | −558,488 | 558,488 | sign | fuzzy | sign convention (normalization): shown in parentheses, stored positive in XBRL. Raw "(558,488" had a clipped ")"; it matched only by accident before the parenthesis fix and now shows the same convention as the 2025 column and the 10-K. Policy, not an error. |
 
-**Needs review**
-
-None: every remaining non-match has a diagnosed cause.
+Every remaining non-match has a diagnosed cause.
 
 Categories not observed on this corpus. OCR: both filings' statement pages have a text
 layer, and no statement page needed OCR. Period alignment: once a line was mapped, every
@@ -205,7 +204,7 @@ standard us-gaap concepts (InterestExpenseNonoperating, IncomeTaxExpenseBenefit,
 OtherNonoperatingExpenseNet, TreasuryStockCommonValue, OperatingLeaseLiabilityCurrent,
 CommonStockValue) or to no concept; no company-specific akam: concept is involved.
 
-### 5. Upstream causes for the tables stage (owner: Kahan)
+### 5. Upstream causes in the tables stage (Part 2)
 
 - The 10-Q balance sheet spans PDF pages 4–5; only page 5 was labeled balance_sheet on
   the traditional path, so the assets (page 4) were never extracted and are not in the
@@ -231,13 +230,3 @@ the root causes remain in the tables stage.
 - Arelle warned about an older inline XBRL transformation namespace
   (http://www.sec.gov/inlineXBRL/transformation/2015-08-31) on duration and count
   facts; no statement line was affected.
-
-### 7. Deliverables
-
-| Deliverable | Path | Status |
-|---|---|---|
-| Validation stage (mapping, comparison, report) | src/xbrl.py | done; extraction-tolerant matching added 2026-10-03 |
-| Interactive walkthrough | notebooks/xbrl_validation.ipynb | executed top-to-bottom without errors, 2026-10-03 |
-| Curated label → concept map | config/label_map.yaml | done; unchanged by the extraction-tolerant work |
-| Extracted XBRL facts | data/xbrl/facts.csv | regenerated 2026-10-03 (1,329 facts 10-K; 861 facts 10-Q) |
-| This report (generated block + discussion) | reports/xbrl.md | done; per-cell detail in data/xbrl/comparison.csv (now with section_source) |
