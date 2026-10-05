@@ -10,9 +10,6 @@ import sys
 import time
 from pathlib import Path
 
-import requests
-from sec_edgar_downloader import Downloader
-
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from common import RAW, load_params
 
@@ -43,6 +40,10 @@ def unpack(sub: Path) -> Path:
 
 
 def companyfacts(cik: str, ua: str) -> Path:
+    # Imported lazily so `unpack` (and this module) stay importable without the network stack,
+    # which the CI smoke job deliberately does not install.
+    import requests
+
     cik = cik.zfill(10)
     out = RAW / "xbrl" / f"companyfacts_CIK{cik}.json"
     if out.exists():  # filings never change once accepted: cache
@@ -56,6 +57,8 @@ def companyfacts(cik: str, ua: str) -> Path:
 
 
 def main():
+    from sec_edgar_downloader import Downloader
+
     p = load_params("download")
     ua = f"{p['user_agent_name']} {p['user_agent_email']}"
     dl = Downloader(p["user_agent_name"], p["user_agent_email"], str(RAW))

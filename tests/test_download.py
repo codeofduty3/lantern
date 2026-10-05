@@ -1,4 +1,9 @@
-from src.download import unpack
+import sys
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT / "src"))
+from download import unpack  # noqa: E402
 
 
 def test_unpack_preserves_ixbrl_schema_and_linkbase_filenames(tmp_path):
