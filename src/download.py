@@ -23,8 +23,9 @@ CIK_RE = re.compile(r"CENTRAL INDEX KEY:\s*(\d+)")
 def unpack(sub: Path) -> Path:
     """Split full-submission.txt into its original files so Arelle can resolve the filing."""
     out = sub.parent / "unpacked"
-    out.mkdir(exist_ok=True)
+    out.mkdir(parents=True, exist_ok=True)
     raw = sub.read_text(errors="ignore")
+    unpacked = 0
     for doc in re.findall(r"<DOCUMENT>(.*?)</DOCUMENT>", raw, re.S):
         name = re.search(r"<FILENAME>([^\n<]+)", doc)
         body = re.search(r"<TEXT>\n?(.*?)</TEXT>", doc, re.S)
@@ -36,6 +37,8 @@ def unpack(sub: Path) -> Path:
         text = body.group(1)  # XML docs sit in <XBRL>/<XML>
         x = re.search(r"<(XBRL|XML)>\n?(.*?)</\1>", text, re.S)
         (out / fn).write_text(x.group(2) if x else text, encoding="utf-8")
+        unpacked += 1
+    print(f"unpacked {sub.parent.name}: {unpacked} files -> {out.resolve()}")
     return out
 
 
@@ -68,7 +71,7 @@ def main():
         m = CIK_RE.search(sub.read_text(errors="ignore")[:5000])
         cik = cik or (m.group(1) if m else None)
         xsd = list(out.glob("*.xsd"))
-        print(f"unpacked {sub.parent.name}: {len(list(out.iterdir()))} files, xsd={len(xsd)}")
+        print(f"  schemas: {len(xsd)}")
     if cik:
         print("companyfacts ->", companyfacts(cik, ua).name)
     mb = sum(f.stat().st_size for f in RAW.rglob("*") if f.is_file()) / 1e6
