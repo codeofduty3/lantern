@@ -18,10 +18,12 @@ from pathlib import Path
 import pandas as pd
 import pdfplumber
 
-sys.path.insert(0, str(Path(__file__).resolve().parent))
+_SRC = str(Path(__file__).resolve().parent)  # src/ last: this file must not shadow
+sys.path = [x for x in sys.path if x not in (_SRC, "")] + [_SRC]  # the docling_parse package
 from common import (DOCLING, FIXTURES, RENDERED, ROOT, list_pdfs, load_manifest, load_params,
                     statement_kind)
 from tables import clean_table, page_caption
+sys.path = [x for x in sys.path if x not in (_SRC, "")] + [_SRC]  # again: tables.py re-inserts src/ first
 
 
 def converter(ocr: bool, mode: str, backend: str = "docling_parse"):
