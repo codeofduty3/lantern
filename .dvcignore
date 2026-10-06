@@ -1,6 +1,12 @@
-# Add patterns of files dvc should ignore, which could improve
-# the performance. Learn more at
+# Paths DVC should never hash. Without these, macOS/editor/byte-compiler
+# leftovers change a directory's hash, so dvc.lock churns on every run even
+# when nothing meaningful changed (e.g. tests/fixtures/.DS_Store,
+# src/managed/__pycache__). Learn more at
 # https://dvc.org/doc/user-guide/dvcignore
 .DS_Store
+**/.DS_Store
 __pycache__/
-*.pyc
+**/__pycache__/
+*.py[cod]
+.pytest_cache/
+**/.pytest_cache/
