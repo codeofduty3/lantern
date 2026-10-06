@@ -42,3 +42,5 @@ reports/ocr_calibration_drafts/*.txt
 models/
 weights/
 checkpoints/
+tests/fixtures/sources/
+repro.log

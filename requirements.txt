@@ -1,26 +1,26 @@
 # Top-level packages. After a working install run:  pip freeze > requirements.txt  (pins all)
-sec-edgar-downloader>=5.0
-requests
-pyyaml
-playwright
-pdfplumber>=0.11
-pypdfium2
-pytesseract
-pillow
-camelot-py>=1.0
-opencv-python-headless
-pandas
-tabulate
-matplotlib
-jiwer>=3.0
-pydantic>=2
-psutil
-pytest
-dvc[s3]
-layoutparser
-effdet
-torch
-torchvision
+sec-edgar-downloader==5.1.0
+requests==2.34.2
+pyyaml==6.0.3
+playwright==1.63.0
+pdfplumber==0.11.10
+pypdfium2==5.14.0
+pytesseract==0.3.13
+pillow==12.3.0
+camelot-py==2.0.0
+opencv-python-headless==5.0.0.93
+pandas==3.0.6
+tabulate==0.10.0
+matplotlib==3.11.2
+jiwer==4.0.0
+pydantic==2.13.5
+psutil==7.2.2
+pytest==9.1.1
+dvc[s3]==3.67.1
+layoutparser==0.3.4
+effdet==0.4.1
+torch==2.14.1
+torchvision==0.29.1
 # Docling parsing stack, pinned to the versions the pipeline currently runs with so the
 # layout/table/OCR output (and therefore DVC hashes) stays stable across installs.
 # transformers is pinned because Docling's saved layout model (docling-layout-heron) ships
@@ -31,8 +31,8 @@ docling-parse==7.22.1
 docling-core==2.99.0
 docling-ibm-models==4.0.3
 transformers==4.57.6
-arelle-release
-boto3
+arelle-release==2.46.0
+boto3==1.43.106
 
 # --- Intel macOS (x86_64) only ---------------------------------------------
 # The newest PyTorch wheel for Intel Macs is 2.2.2: its C extension is built against

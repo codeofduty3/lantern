@@ -75,7 +75,12 @@ def stage_fns(P):
         return "x" * len(blocks)
 
     def docling(pdf_path, page):
-        from parse_docling import converter
+        import importlib.util
+        spec = importlib.util.spec_from_file_location(
+            "lantern_docling", Path(__file__).with_name("docling_parse.py"))
+        mod = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(mod)
+        converter = mod.converter
         if "dl" not in state:
             state["dl"] = converter(False, P["docling"]["table_mode"])
         with tempfile.NamedTemporaryFile(suffix=".pdf") as tmp:

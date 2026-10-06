@@ -11,22 +11,22 @@ stages:
     outs: [data/rendered]
   parse_pdfplumber:
     cmd: python src/parse_text.py --input data/rendered tests/fixtures --out data/parsed
-    deps: [src/parse_text.py, src/common.py, src/managed, data/rendered, tests/fixtures, data/managed]
+    deps: [src/parse_text.py, src/common.py, src/managed, data/rendered, tests/fixtures/scanned.pdf, tests/fixtures/statement.pdf, tests/fixtures/multicol.pdf, data/managed]
     params: [ocr, managed]
     outs: [data/parsed]
   tables:
     cmd: python src/tables.py --input data/rendered tests/fixtures --out data/tables
-    deps: [src/tables.py, src/common.py, src/managed, data/rendered, tests/fixtures, data/managed]
+    deps: [src/tables.py, src/common.py, src/managed, data/rendered, tests/fixtures/scanned.pdf, tests/fixtures/statement.pdf, tests/fixtures/multicol.pdf, data/managed]
     params: [tables, managed]
     outs: [data/tables]
   layout:
     cmd: python src/layout.py --input data/rendered tests/fixtures --out data/layout
-    deps: [src/layout.py, src/tables.py, src/parse_text.py, src/common.py, data/rendered, tests/fixtures]
+    deps: [src/layout.py, src/tables.py, src/parse_text.py, src/common.py, data/rendered, tests/fixtures/scanned.pdf, tests/fixtures/statement.pdf, tests/fixtures/multicol.pdf]
     params: [layout, ocr, tables]
     outs: [data/layout, data/figures, data/models]
   parse_docling:
-    cmd: python src/parse_docling.py
-    deps: [src/parse_docling.py, src/tables.py, src/common.py, data/rendered, data/raw, tests/fixtures]
+    cmd: python src/docling_parse.py
+    deps: [src/docling_parse.py, src/tables.py, src/common.py, data/rendered, data/raw, tests/fixtures/scanned.pdf, tests/fixtures/statement.pdf, tests/fixtures/multicol.pdf]
     params: [docling]
     outs: [data/docling]
   export:
