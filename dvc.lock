@@ -403,9 +403,9 @@ stages:
       nfiles: 7
     - path: data/ground_truth
       hash: md5
-      md5: 6ffbaaad7b4ac6e1afabed19a80b2560.dir
-      size: 0
-      nfiles: 1
+      md5: d35c6be34d8166a927c6a4d7cbce7cb7.dir
+      size: 3256
+      nfiles: 4
     - path: data/parsed
       hash: md5
       md5: fda20601c34417eaa51e733baabeb130.dir
@@ -441,8 +441,8 @@ stages:
     outs:
     - path: reports/metrics.json
       hash: md5
-      md5: ce099760b0647144bb3ea2379a1e5d61
-      size: 646
+      md5: 19a278dc6f3f564834552908e764a208
+      size: 674
     - path: reports/plots/drift.png
       hash: md5
       md5: f117129b4c39f8ae255d611c18270f44
