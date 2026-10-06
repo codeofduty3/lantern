@@ -6,7 +6,7 @@
 | WER (mean) | - | - | eval.md |
 | CER (mean) | - | - | eval.md |
 | numeric accuracy | - | - | eval.md |
-| table cell F1 | 0.950 | 1.000 | eval.md |
+| table cell F1 | 0.947 | 1.000 | eval.md |
 | XBRL match rate | 0.891 | 0.922 | xbrl.md |
 | s/page p50 | - (text) / - (tables) / - (layout) | - | benchmarks.md |
 | provenance | page + bbox per block (layout) | page + bbox per item (prov.jsonl, normalized to top-left) | data/export, data/docling |
