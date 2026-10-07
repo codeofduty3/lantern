@@ -4,11 +4,14 @@
 | dimension | traditional | docling | source |
 |---|---|---|---|
 | WER (mean) | - | - | eval.md |
+| reading-order WER (multi-column stratum) | not scored (no text GT) | not scored (no text GT) | eval.md; tests/fixtures/gt/CONVENTIONS.md |
+| footnote-text WER | not scored (no text GT) | not scored (no text GT) | eval.md; requires footnote ground-truth stratum |
 | CER (mean) | - | - | eval.md |
 | numeric accuracy | - | - | eval.md |
 | table cell F1 | 0.947 | 1.000 | eval.md |
 | XBRL match rate | 0.891 | 0.922 | xbrl.md |
-| s/page p50 | - (text) / - (tables) / - (layout) | - | benchmarks.md |
+| s/page p50 | 0.370 (text) / 1.012 (tables) / 0.502 (layout) | 1.590 | benchmarks.md |
+| Part 10 coverage | text: 100 pages; 100 non-empty; 0 empty; 0 errors; tables: 45 pages; 45 non-empty; 0 empty; 0 errors; layout: 100 pages; 99 non-empty; 1 empty; 0 errors | 100 pages; 99 non-empty; 1 empty; 0 errors | data/bench/*.csv |
 | provenance | page + bbox per block (layout) | page + bbox per item (prov.jsonl, normalized to top-left) | data/export, data/docling |
 
 Rendered PDF vs original iXBRL HTML (Docling), data/docling/html_vs_pdf.csv:
@@ -23,7 +26,39 @@ Rendered PDF vs original iXBRL HTML (Docling), data/docling/html_vs_pdf.csv:
 
 ## Discussion
 
-Footnotes audit (5 notes pages), reading-order examples, and the one-paragraph recommendation to Lina: primary path and fallback.
+### Measured comparison and coverage
+
+The available Part 9 table ground truth gives Docling cell F1 **1.000** versus **0.947**
+for the traditional extractor (188 gold cells across the 10-K statement pages and fixture);
+the XBRL match rate is **0.922** versus **0.891**. Those results favor Docling for
+statement-table recovery, but they do not establish better table geometry or general
+reading order. `data/ground_truth/strata.csv` currently has no text pages, so mean WER/CER,
+multi-column reading-order WER, and footnote-text WER are **not scored**; the discussion
+must not treat their blank values as ties or successes. Docling's page-specific Markdown
+and the traditional parser's page text are already saved for scoring after ground truth
+is transcribed.
+
+Both paths expose page and bounding-box provenance: traditional blocks in `data/layout/`
+and exported records, and Docling item provenance in per-filing `.prov.jsonl` files using
+top-left point coordinates. On the Part 10 100-page sample, warm p50 was 0.370 s/page for
+traditional text, 0.502 for layout, and 1.012 on 45 table-candidate pages; Docling was
+1.590 s/page. Weighting the table stage by its 45% candidate-page share gives an estimated
+1.328 s/page for traditional sequential stages versus 1.590 for Docling; this is a
+stage-median estimate, not a separately instrumented end-to-end run. Both layout and
+Docling had one empty result on the same blank 10-Q page 2 and no runtime exceptions.
+The HTML/PDF comparison shows 82 vs 89 detected tables and 1,621 vs 5,255 normalized
+numeric cells, respectively, plus 492,985 vs 1,012,018 Markdown characters. This
+isolates substantial content loss/compaction during rendering, but HTML has no pagination
+and the counts do not by themselves imply better structural accuracy.
+
+### Recommendation to Lina
+
+Keep the traditional layout-aware pipeline as the primary corpus path and Docling as the
+table-focused alternate/fallback for now. The traditional sequential stage estimate is
+faster (1.328 vs 1.590 s/page), while Docling leads on the available table-cell F1 and
+XBRL match rate; no text or footnote ground-truth pages exist to compare reading order or
+footnote fidelity. Revisit the primary-path choice after collecting those missing Part 9
+measurements and validating the table-weighted throughput estimate end-to-end.
 
 ### Scanned fixture backend
 
