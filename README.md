@@ -81,8 +81,14 @@ Discussion section written by the team, which the scripts never touch.
 ## Setup (once)
 
 System packages: Tesseract (`brew install tesseract` / `apt install tesseract-ocr`), Poppler
-(`brew install poppler` / `apt install poppler-utils`). Camelot >= 1.0 renders with pypdfium2,
-so Ghostscript is not required.
+(`brew install poppler` / `apt install poppler-utils`), and on Linux `libGL`
+(`apt install libgl1`). Camelot >= 1.0 renders with pypdfium2, so Ghostscript is not required.
+
+`libgl1` is required because `layoutparser` (and docling's `rapidocr` extra) pull the
+*non-headless* `opencv-python`, which installs the same `cv2` package as
+`opencv-python-headless` and needs `libGL.so.1` to import. Without it `import cv2` fails and
+`pytest` errors during collection. macOS ships libGL with the system, so no extra package is
+needed there.
 
 The layout stage is frozen in `dvc.yaml` because its LayoutParser/effdet/PyTorch stack is
 intended to run in Colab, not in the grading environment. Its outputs (`data/layout/`,
