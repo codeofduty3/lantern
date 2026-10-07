@@ -6,10 +6,19 @@ file is meaningful locally (after ``dvc pull``) and in CI.
 """
 from __future__ import annotations
 
+import sys
+from pathlib import Path
+
 import pytest
 
 pytest.importorskip("fastapi")
 pytest.importorskip("httpx")
+
+# The API is a package (src/api), so the repo root -- not src/ -- must be
+# importable. Add it explicitly: CI runs the `pytest` console script, which does
+# not put the working directory on sys.path the way `python -m pytest` does.
+ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT))
 
 from fastapi.testclient import TestClient  # noqa: E402
 
