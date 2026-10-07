@@ -1,0 +1,4 @@
+# Frontend (Streamlit) runtime only.
+streamlit==1.41.1
+requests==2.32.3
+pandas==2.2.3

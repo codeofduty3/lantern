@@ -1,0 +1,15 @@
+run = "bash run_api.sh"
+entrypoint = "src/api/main.py"
+hidden = [".pythonlibs", "__pycache__", ".dvc/cache"]
+
+[nix]
+channel = "stable-24_05"
+
+[env]
+PYTHONUNBUFFERED = "1"
+LANTERN_CORS_ORIGINS = "*"
+
+# Swagger UI ("Try it out") is served on this port at /docs.
+[[ports]]
+localPort = 8000
+externalPort = 80

@@ -91,3 +91,11 @@ Duration: 3
 Duration: 5
 
 Match rate per statement and path; one diagnosed mismatch.
+
+## Part 12 - Serving layer (API + UI)
+Duration: 4
+
+`uvicorn src.api.main:app` serves the corpus as JSON with Swagger at `/docs`;
+`streamlit run app/streamlit_app.py` is the browser UI. Show `/health`, run one
+`/search` from the Swagger **Try it out** button, then the Streamlit explorer.
+Deployment (Replit API, Vercel API, Streamlit Cloud UI) is in `docs/serving.md`.

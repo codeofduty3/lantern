@@ -29,6 +29,10 @@ flowchart LR
   xbrl --> evaluate
   managed[(data/managed cache)] -.-> parse_pdfplumber
   managed -.-> tables
+  export --> serve
+  xbrl --> serve
+  evaluate --> serve
+  serve[api + ui] --> explore[Streamlit]
 ```
 
 | Stage | Script | Output |
@@ -42,6 +46,7 @@ flowchart LR
 | export | `src/export.py` | `data/export/{stem}.jsonl/.md/.txt` |
 | xbrl | `src/xbrl.py` | `data/xbrl/facts.csv`, `comparison.csv` |
 | evaluate | `src/evaluate.py` | `reports/metrics.json`, `reports/eval.md`, `reports/plots/drift.png` |
+| serve | `src/api/`, `app/` | `data/serve/`, FastAPI at `/docs`, Streamlit UI |
 
 ## Map from each Part to code and reports
 
@@ -59,6 +64,7 @@ flowchart LR
 | 9 Evaluation | `src/evaluate.py`, `tests/test_quality.py` | `reports/eval.md`, `reports/metrics.json`, `reports/plots/drift.png` |
 | 10 Benchmarks | `src/bench.py` | `data/bench/*.csv`, `reports/benchmarks.md` |
 | 11 XBRL | `src/xbrl.py`, `config/label_map.yaml`, `notebooks/xbrl_validation.ipynb` | `reports/xbrl.md` |
+| 12 Serving | `src/api/`, `app/streamlit_app.py` | FastAPI (`/docs` Swagger) + Streamlit UI; see [docs/serving.md](docs/serving.md) |
 
 Part 10 is run separately from `dvc repro` because model loading and timings are hardware-
 dependent. After rendered PDFs are available (for example, after `dvc pull`), run:
@@ -77,6 +83,39 @@ the layout dependencies from `requirements-colab.txt`; benchmarking remains sepa
 
 Reports have a generated block (between `AUTO:START/END`, rewritten by the scripts) and a
 Discussion section written by the team, which the scripts never touch.
+
+## Serving layer (Part 12)
+
+A read-only **FastAPI backend** over the corpus (interactive Swagger UI at
+`/docs`, every operation runnable in place) and a **Streamlit frontend** that
+browses filings, provenance blocks, tables, XBRL facts, search and metrics.
+Full deployment notes are in [docs/serving.md](docs/serving.md).
+
+```bash
+make serve-venv     # create .venv-serve and install both requirements files
+make api            # backend  -> http://127.0.0.1:8000/docs
+make ui             # frontend -> http://127.0.0.1:8501
+make test-api       # API contract tests
+```
+
+`make serve-venv` builds the isolated environment; the commands it wraps are:
+
+```bash
+python3.11 -m venv .venv-serve && source .venv-serve/bin/activate
+pip install -r src/api/requirements.txt -r app/requirements.txt
+uvicorn src.api.main:app --reload                                   # backend -> /docs
+LANTERN_API_URL=http://127.0.0.1:8000 streamlit run app/streamlit_app.py   # frontend
+```
+
+The backend reads the pipeline outputs directly after `dvc pull`, or a portable
+bundle built with `make bundle` (`python -m src.api.build_bundle`), which
+`src/api/store.py` prefers when it exists. The serving deps stay in their own
+venv so they never disturb the pipeline's pinned environment.
+
+Deployment: the API is ready for **Replit** (`.replit` + `replit.nix` +
+`run_api.sh`, so `/docs` is served and runnable there) and for **Vercel**
+(`vercel.json` + `api/index.py`). The Streamlit UI deploys to Streamlit
+Community Cloud or any Python host; `LANTERN_API_URL` points it at the backend.
 
 ## Setup (once)
 

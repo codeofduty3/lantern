@@ -1,0 +1,4 @@
+# Backend (API) runtime only -- much lighter than the full pipeline requirements.
+fastapi==0.115.6
+uvicorn[standard]==0.34.0
+pydantic==2.13.5
