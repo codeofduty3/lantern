@@ -84,9 +84,14 @@ System packages: Tesseract (`brew install tesseract` / `apt install tesseract-oc
 (`brew install poppler` / `apt install poppler-utils`). Camelot >= 1.0 renders with pypdfium2,
 so Ghostscript is not required.
 
-The layout stage fetches its detector weights into `data/models/` on first run from the
-pinned URL in `params.yaml` (layoutparser's own catalog points at deleted Dropbox files) and
-checks the sha256 before use. On Intel macOS the newest PyTorch wheel is 2.2.2, which needs
+The layout stage is frozen in `dvc.yaml` because its LayoutParser/effdet/PyTorch stack is
+intended to run in Colab, not in the grading environment. Its outputs (`data/layout/`,
+`data/figures/`, and `data/models/`) are pushed to the DVC remote and restored by `dvc pull`;
+`dvc repro` never executes a frozen stage. If you need to regenerate layout outputs, use an
+environment with the packages in `requirements-colab.txt`, then run `dvc unfreeze layout`
+before `dvc repro`. The stage fetches detector weights from the pinned URL in `params.yaml`
+(layoutparser's own catalog points at deleted Dropbox files) and checks the sha256 before use.
+On Intel macOS the newest PyTorch wheel is 2.2.2, which needs
 the NumPy 1.x ABI, so `requirements.txt` holds `numpy`, `opencv-python` and `transformers`
 back for `darwin`/`x86_64` only; on other platforms the normal versions apply.
 

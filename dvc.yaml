@@ -10,40 +10,56 @@ stages:
     params: [render]
     outs: [data/rendered]
   parse_pdfplumber:
-    cmd: python src/parse_text.py --input data/rendered tests/fixtures --out data/parsed
-    deps: [src/parse_text.py, src/common.py, src/managed, data/rendered, tests/fixtures/scanned.pdf, tests/fixtures/statement.pdf, tests/fixtures/multicol.pdf, data/managed]
+    cmd: python src/parse_text.py --input data/rendered tests/fixtures --out
+      data/parsed
+    deps: [src/parse_text.py, src/common.py, src/managed, data/rendered,
+        tests/fixtures/scanned.pdf, tests/fixtures/statement.pdf,
+        tests/fixtures/multicol.pdf, data/managed]
     params: [ocr, managed]
     outs: [data/parsed]
   tables:
-    cmd: python src/tables.py --input data/rendered tests/fixtures --out data/tables
-    deps: [src/tables.py, src/common.py, src/managed, data/rendered, tests/fixtures/scanned.pdf, tests/fixtures/statement.pdf, tests/fixtures/multicol.pdf, data/managed]
+    cmd: python src/tables.py --input data/rendered tests/fixtures --out
+      data/tables
+    deps: [src/tables.py, src/common.py, src/managed, data/rendered,
+        tests/fixtures/scanned.pdf, tests/fixtures/statement.pdf,
+        tests/fixtures/multicol.pdf, data/managed]
     params: [tables, managed]
     outs: [data/tables]
   layout:
-    cmd: python src/layout.py --input data/rendered tests/fixtures --out data/layout
-    deps: [src/layout.py, src/tables.py, src/parse_text.py, src/common.py, data/rendered, tests/fixtures/scanned.pdf, tests/fixtures/statement.pdf, tests/fixtures/multicol.pdf]
+    cmd: python src/layout.py --input data/rendered tests/fixtures --out
+      data/layout
+    deps: [data/rendered, src/common.py, src/layout.py, src/parse_text.py,
+        src/tables.py, tests/fixtures/multicol.pdf, tests/fixtures/scanned.pdf,
+        tests/fixtures/statement.pdf]
     params: [layout, ocr, tables]
-    outs: [data/layout, data/figures, data/models]
+    frozen: true
+    outs: [data/figures, data/layout, data/models]
   parse_docling:
     cmd: python src/docling_parse.py
-    deps: [src/docling_parse.py, src/tables.py, src/common.py, data/rendered, data/raw, tests/fixtures/scanned.pdf, tests/fixtures/statement.pdf, tests/fixtures/multicol.pdf]
+    deps: [src/docling_parse.py, src/tables.py, src/common.py, data/rendered,
+        data/raw, tests/fixtures/scanned.pdf, tests/fixtures/statement.pdf,
+        tests/fixtures/multicol.pdf]
     params: [docling]
     outs: [data/docling]
   export:
     cmd: python src/export.py
-    deps: [src/export.py, src/schema.py, src/common.py, data/layout, data/rendered, data/raw]
+    deps: [src/export.py, src/schema.py, src/common.py, data/layout,
+        data/rendered, data/raw]
     outs: [data/export]
   xbrl:
     cmd: python src/xbrl.py
-    deps: [src/xbrl.py, src/tables.py, config/label_map.yaml, data/raw, data/rendered, data/tables, data/docling]
+    deps: [src/xbrl.py, src/tables.py, config/label_map.yaml, data/raw,
+        data/rendered, data/tables, data/docling]
     outs: [data/xbrl]
   evaluate:
     cmd: python src/evaluate.py
-    deps: [src/evaluate.py, src/tables.py, data/parsed, data/tables, data/docling, data/export, data/xbrl, data/ground_truth, tests/fixtures/gt]
+    deps: [src/evaluate.py, src/tables.py, data/parsed, data/tables,
+        data/docling, data/export, data/xbrl, data/ground_truth,
+        tests/fixtures/gt]
     params: [evaluate]
     metrics:
-      - reports/metrics.json:
-          cache: false
+    - reports/metrics.json:
+        cache: false
     plots:
-      - reports/plots/drift.png:
-          cache: false
+    - reports/plots/drift.png:
+        cache: false
