@@ -25,7 +25,7 @@
   },
   "xbrl": {
     "traditional": {
-      "match_rate": 0.8906882591093117
+      "match_rate": 0.9186991869918699
     },
     "docling": {
       "match_rate": 0.9217391304347826

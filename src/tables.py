@@ -159,18 +159,41 @@ def clean_table(df: pd.DataFrame, caption: str = ""):
 
     cap_scale = scale_from_caption(caption)
     recs, section, pending = [], "", None  # pending = label-only row that may continue
+    pending_common_stock = False
     for r in grid[header_end:]:
         vals = row_values(r)
+        if periods:
+            # Numbers in labels/captions (authorized shares, dates) precede the
+            # period columns and must not be mistaken for statement amounts.
+            first_period_col = min(periods)
+            vals = [(j, c) for j, c in vals if j >= first_period_col]
         first_val = vals[0][0] if vals else ncol
         label = " ".join(c for j, c in enumerate(r) if c and j < first_val and not is_value(c))
         label = label.replace("\n", " ").strip()
         if not vals:
             if label:
-                if pending is not None:  # consecutive label rows: previous one was a section
-                    section = pending
+                if pending is not None:
+                    pending_key = re.sub(r"[^a-z0-9]", "", pending.lower())
+                    common_caption = (
+                        "commonstock" in pending_key
+                        and ("parvalue" in pending_key or "sharesauthorized" in pending_key)
+                    )
+                    if common_caption:
+                        pending_common_stock = True
+                    elif not pending_common_stock:
+                        section = pending
                 pending = label
             continue
-        if not label and pending is not None:  # wrapped label: 'Shares used in ...' + values
+        label_key = re.sub(r"[^a-z0-9]", "", label.lower())
+        share_caption = "sharesoutstanding" in label_key or "sharesissued" in label_key
+        if pending_common_stock or (
+            pending is not None
+            and "commonstock" in re.sub(r"[^a-z0-9]", "", pending.lower())
+            and share_caption
+        ):
+            label, section, pending = "common stock, $0.01 par value", "", None
+            pending_common_stock = False
+        elif not label and pending is not None:  # wrapped label: 'Shares used in ...' + values
             label, pending = pending, None
         elif pending is not None:
             section, pending = pending, None
