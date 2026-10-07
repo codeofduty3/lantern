@@ -4,15 +4,21 @@ With managed.enabled: false (default) only cache hits are used and no API call i
 so dvc repro and CI run without credentials. Keys come from the standard AWS env/profile.
 """
 import json
+import re
 import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from common import MANAGED, page_pdf_bytes, sha256
 
+_VOLATILE_PDF_METADATA = re.compile(
+    rb"/ID\s*\[\s*<[^>]+>\s*<[^>]+>\s*\]|/(?:CreationDate|ModDate)\s*\([^)]*\)")
+
 
 def cache_path(page_bytes: bytes) -> Path:
-    return MANAGED / f"{sha256(data=page_bytes)}.json"
+    # PDFium assigns fresh IDs and timestamps when it serializes the same page.
+    canonical = _VOLATILE_PDF_METADATA.sub(b"", page_bytes)
+    return MANAGED / f"{sha256(data=canonical)}.json"
 
 
 def analyze_page(pdf_path, pno: int, cfg: dict, force: bool = False):

@@ -138,9 +138,13 @@ def clean_table(df: pd.DataFrame, caption: str = ""):
             vals = vals[1:]
         return vals
 
-    # header rows = rows before the first row with a non-year value
+    # A split date heading can contain numeric fragments (e.g. "31,") before
+    # the actual year row. Do not mistake those fragments for the first data row.
+    first_year_row = next((i for i, r in enumerate(grid)
+                           if any(YEAR.search(c) for c in r)), None)
     first_data = next((i for i, r in enumerate(grid)
-                       if any(not YEAR_ONLY.match(c) for _, c in row_values(r))), len(grid))
+                       if (first_year_row is None or i > first_year_row)
+                       and any(not YEAR_ONLY.match(c) for _, c in row_values(r))), len(grid))
     head, header_end = {}, 0
     for i, r in enumerate(grid[:first_data]):
         for j, c in enumerate(r):

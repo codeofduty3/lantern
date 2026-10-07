@@ -15,8 +15,9 @@ import yaml
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
 from evaluate import cell_set, gt_dirs, prf, score_page  # noqa: E402
+from managed import cache_path  # noqa: E402
 from parse_text import extract_page_text, needs_ocr, page_signals  # noqa: E402
-from tables import extract_best_df, row_scale, to_number  # noqa: E402
+from tables import clean_table, extract_best_df, row_scale, to_number  # noqa: E402
 
 FX = ROOT / "tests" / "fixtures"
 GT = FX / "gt"
@@ -59,6 +60,30 @@ def test_row_scale_exceptions():
     assert row_scale("earnings per share", "diluted", "6.08", cap, 1e6) == 1.0
     assert row_scale("shares used in computing earnings per share", "basic", "1", cap, 1e6) == 1e3
     assert row_scale("", "net income", "112,010", cap, 1e6) == 1e6
+
+
+def test_clean_table_skips_split_date_heading_before_years():
+    raw = pd.DataFrame([
+        ["", "For the", "Years Ended December", "31,"],
+        ["(in thousands, except per share data)", "2024", "2023", "2022"],
+        ["Revenue", "$ 3,991,168", "$ 3,811,920", "$ 3,616,654"],
+    ])
+    tidy, stats = clean_table(raw)
+    assert stats["periods"] == 3
+    assert tidy[["label", "period", "raw"]].to_dict("records") == [
+        {"label": "revenue", "period": "2024", "raw": "$ 3,991,168"},
+        {"label": "revenue", "period": "2023", "raw": "$ 3,811,920"},
+        {"label": "revenue", "period": "2022", "raw": "$ 3,616,654"},
+    ]
+
+
+def test_managed_cache_key_is_stable_and_page_specific():
+    prefix = b"%PDF /ID[<"
+    suffix = b"><" + b"0" * 32 + b">] /CreationDate (D:20261007000000) /ModDate (D:20261007000000) "
+    first = prefix + b"1" * 32 + suffix + b"page"
+    second = prefix + b"2" * 32 + suffix.replace(b"20261007000000", b"20261007000001") + b"page"
+    assert cache_path(first) == cache_path(second)
+    assert cache_path(first) != cache_path(first + b" changed")
 
 
 # ---------------------------------------------------------------- text quality vs ground truth

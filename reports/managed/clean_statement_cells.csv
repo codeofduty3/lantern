@@ -1,0 +1,82 @@
+section,label,period,open_source,managed,equal
+,gain (loss) from equity method investment,2022,"(7,635)","(7,635)",True
+,gain (loss) from equity method investment,2023,"1,475","1,475",True
+,gain (loss) from equity method investment,2024,—,-,False
+,income before provision for income taxes,2022,"658,003","658,003",True
+,income before provision for income taxes,2023,"652,527","652,527",True
+,income before provision for income taxes,2024,"587,013","587,013",True
+,income from operations,2022,"676,274","676,274",True
+,income from operations,2023,"637,338","637,338",True
+,income from operations,2024,"533,411","533,411",True
+,"interest and marketable securities income, net",2022,"3,258","3,258",True
+,"interest and marketable securities income, net",2023,"45,194","45,194",True
+,"interest and marketable securities income, net",2024,"100,280","100,280",True
+,interest expense,2022,"(11,096)","(11,096)",True
+,interest expense,2023,"(17,709)","(17,709)",True
+,interest expense,2024,"(27,117)","(27,117)",True
+,net income,2022,"523,672","$ 523,672",True
+,net income,2023,"547,629","$ 547,629",True
+,net income,2024,"504,918","$ 504,918",True
+,"other expense, net",2022,"(10,433)","(10,433)",True
+,"other expense, net",2023,"(12,296)","(12,296)",True
+,"other expense, net",2024,"(19,561)","(19,561)",True
+,provision for income taxes,2022,"(126,696)","(126,696)",True
+,provision for income taxes,2023,"(106,373)","(106,373)",True
+,provision for income taxes,2024,"(82,095)","(82,095)",True
+,revenue,2022,"3,616,654","$ 3,616,654",True
+,revenue,2023,"3,811,920","$ 3,811,920",True
+,revenue,2024,"3,991,168","$ 3,991,168",True
+cost of revenue (exclusive of amortization of acquired intangible assets shown,amortization of acquired intangible assets,2022,"64,983",,False
+cost of revenue (exclusive of amortization of acquired intangible assets shown,amortization of acquired intangible assets,2023,"66,751",,False
+cost of revenue (exclusive of amortization of acquired intangible assets shown,amortization of acquired intangible assets,2024,"92,081",,False
+cost of revenue (exclusive of amortization of acquired intangible assets shown,below),2022,"1,383,819",,False
+cost of revenue (exclusive of amortization of acquired intangible assets shown,below),2023,"1,511,063",,False
+cost of revenue (exclusive of amortization of acquired intangible assets shown,below),2024,"1,620,793",,False
+cost of revenue (exclusive of amortization of acquired intangible assets shown,general and administrative,2022,"584,206",,False
+cost of revenue (exclusive of amortization of acquired intangible assets shown,general and administrative,2023,"600,851",,False
+cost of revenue (exclusive of amortization of acquired intangible assets shown,general and administrative,2024,"621,785",,False
+cost of revenue (exclusive of amortization of acquired intangible assets shown,research and development,2022,"391,434",,False
+cost of revenue (exclusive of amortization of acquired intangible assets shown,research and development,2023,"406,048",,False
+cost of revenue (exclusive of amortization of acquired intangible assets shown,research and development,2024,"470,876",,False
+cost of revenue (exclusive of amortization of acquired intangible assets shown,restructuring charge,2022,"13,529",,False
+cost of revenue (exclusive of amortization of acquired intangible assets shown,restructuring charge,2023,"56,643",,False
+cost of revenue (exclusive of amortization of acquired intangible assets shown,restructuring charge,2024,"95,441",,False
+cost of revenue (exclusive of amortization of acquired intangible assets shown,sales and marketing,2022,"502,409",,False
+cost of revenue (exclusive of amortization of acquired intangible assets shown,sales and marketing,2023,"533,226",,False
+cost of revenue (exclusive of amortization of acquired intangible assets shown,sales and marketing,2024,"556,781",,False
+cost of revenue (exclusive of amortization of acquired intangible assets shown,total costs and operating expenses,2022,"2,940,380",,False
+cost of revenue (exclusive of amortization of acquired intangible assets shown,total costs and operating expenses,2023,"3,174,582",,False
+cost of revenue (exclusive of amortization of acquired intangible assets shown,total costs and operating expenses,2024,"3,457,757",,False
+costs and operating expenses,amortization of acquired intangible assets,2022,,"64,983",False
+costs and operating expenses,amortization of acquired intangible assets,2023,,"66,751",False
+costs and operating expenses,amortization of acquired intangible assets,2024,,"92,081",False
+costs and operating expenses,cost of revenue (exclusive of amortization of acquired intangible assets shown below),2022,,"1,383,819",False
+costs and operating expenses,cost of revenue (exclusive of amortization of acquired intangible assets shown below),2023,,"1,511,063",False
+costs and operating expenses,cost of revenue (exclusive of amortization of acquired intangible assets shown below),2024,,"1,620,793",False
+costs and operating expenses,general and administrative,2022,,"584,206",False
+costs and operating expenses,general and administrative,2023,,"600,851",False
+costs and operating expenses,general and administrative,2024,,"621,785",False
+costs and operating expenses,research and development,2022,,"391,434",False
+costs and operating expenses,research and development,2023,,"406,048",False
+costs and operating expenses,research and development,2024,,"470,876",False
+costs and operating expenses,restructuring charge,2022,,"13,529",False
+costs and operating expenses,restructuring charge,2023,,"56,643",False
+costs and operating expenses,restructuring charge,2024,,"95,441",False
+costs and operating expenses,sales and marketing,2022,,"502,409",False
+costs and operating expenses,sales and marketing,2023,,"533,226",False
+costs and operating expenses,sales and marketing,2024,,"556,781",False
+costs and operating expenses,total costs and operating expenses,2022,,"2,940,380",False
+costs and operating expenses,total costs and operating expenses,2023,,"3,174,582",False
+costs and operating expenses,total costs and operating expenses,2024,,"3,457,757",False
+net income per share,basic,2022,3.29,$ 3.29,True
+net income per share,basic,2023,3.59,$ 3.59,True
+net income per share,basic,2024,3.34,$ 3.34,True
+net income per share,diluted,2022,3.26,$ 3.26,True
+net income per share,diluted,2023,3.52,$ 3.52,True
+net income per share,diluted,2024,3.27,$ 3.27,True
+shares used in per share calculations,basic,2022,"159,089","159,089",True
+shares used in per share calculations,basic,2023,"152,510","152,510",True
+shares used in per share calculations,basic,2024,"151,392","151,392",True
+shares used in per share calculations,diluted,2022,"160,467","160,467",True
+shares used in per share calculations,diluted,2023,"155,397","155,397",True
+shares used in per share calculations,diluted,2024,"154,346","154,346",True
