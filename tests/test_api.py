@@ -6,8 +6,6 @@ file is meaningful locally (after ``dvc pull``) and in CI.
 """
 from __future__ import annotations
 
-from pathlib import Path
-
 import pytest
 
 pytest.importorskip("fastapi")
@@ -15,14 +13,17 @@ pytest.importorskip("httpx")
 
 from fastapi.testclient import TestClient  # noqa: E402
 
+from src.api import store  # noqa: E402
 from src.api.main import app  # noqa: E402
 
-REPO_ROOT = Path(__file__).resolve().parents[1]
-EXPORT_DIR = REPO_ROOT / "data" / "export"
-STEMS = sorted(p.stem for p in EXPORT_DIR.glob("*.jsonl")) if EXPORT_DIR.is_dir() else []
+# Resolve through the store, which honours $LANTERN_DATA_ROOT -> data/serve ->
+# data/. Deriving stems from data/export directly would disagree with the API in
+# CI, where the committed bundle is present but data/export is not.
+STEMS = store.list_stems()
 
 client = TestClient(app)
-needs_corpus = pytest.mark.skipif(not STEMS, reason="no corpus in data/export (run dvc pull)")
+needs_corpus = pytest.mark.skipif(
+    not STEMS, reason="no corpus (run dvc pull, or python -m src.api.build_bundle)")
 
 
 def test_openapi_contract():
@@ -44,6 +45,7 @@ def test_swagger_ui_is_served():
 def test_health_reports_corpus():
     body = client.get("/health").json()
     assert body["status"] == "ok"
+    assert body["corpus"]["filings"] == len(body["corpus"]["stems"])
     assert body["corpus"]["filings"] == len(STEMS)
 
 
