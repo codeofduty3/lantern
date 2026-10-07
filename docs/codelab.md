@@ -54,7 +54,23 @@ Sizes, token counts, LLM answers, format decision.
 ## Part 7 - Build vs buy
 Duration: 4
 
-Textract vs open source side by side; cost; fallback design.
+Compare the clean and scanned statement pages in `reports/build_vs_buy.md`, including text and
+table-cell outputs under `reports/managed/`. The script reads page-hash cache entries by default:
+
+```bash
+python src/managed/compare.py
+```
+
+To populate the cache, explicitly allow the two Textract requests:
+
+```bash
+python src/managed/compare.py --call-api
+dvc add data/managed
+```
+
+Review the provider pricing and client-document data-handling questions in the report before
+enabling live calls. `managed.enabled: false` remains the default; DVC stages can use cache hits
+but make no API calls when the cache misses.
 
 ## Part 8 - DVC pipeline and CI
 Duration: 4

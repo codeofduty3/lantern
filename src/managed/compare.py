@@ -4,8 +4,8 @@ Pages: the 10-K income statement page (clean) and the statement page of the scan
 Run once with credentials:  python src/managed/compare.py --call-api   (then: dvc add data/managed)
 Later runs read the cache only (no credentials needed).
 
-Output: reports/managed/{name}.jsonl (schema-validated), {name}_cells.csv (side by side),
-        reports/build_vs_buy.md (generated block)
+Output: reports/managed/{name}.jsonl (schema-validated), {name}_cells.csv and
+        {name}_text.txt (side by side), reports/build_vs_buy.md (generated block)
 """
 import argparse
 import json
@@ -31,12 +31,14 @@ OUT = REPORTS / "managed"
 
 def open_source(pdf_path, page, P):
     txt = page.extract_text(x_tolerance=1.5, y_tolerance=3) or ""
+    text_engine = "pdfplumber"
     if needs_ocr(page_signals(page, txt), P["ocr"])[0]:
         txt = ocr_page(page, P["ocr"]["dpi"], P["ocr"]["config"])[0]
+        text_engine = "tesseract"
     res = extract_best(pdf_path, page, P["tables"])
     tidy = max((clean_table(df, page_caption(page))[0] for df, _, _ in res["tables"]),
                key=len, default=pd.DataFrame(columns=["section", "label", "period", "raw"]))
-    return txt, tidy, res["method"]
+    return txt, tidy, res["method"], text_engine
 
 
 def ground_truth(stem, pno):
@@ -91,8 +93,9 @@ def main():
     jobs = [("clean_statement", tenk, is_page), ("scanned_statement", FIXTURES / "scanned.pdf", scan_p)]
     OUT.mkdir(parents=True, exist_ok=True)
     md = ["| page | source | open-source engine | managed | WER open source | WER managed | "
-          "reference | table cells: both equal / differ / only OSS / only managed |",
-          "|---|---|---|---|---|---|---|---|"]
+          "managed-vs-open-source WER | reference | table cells: both equal / differ / "
+          "only OSS / only managed |",
+          "|---|---|---|---|---:|---:|---:|---|---|"]
     for name, pdf_path, pno in jobs[:mcfg["max_pages"]]:
         resp, src = analyze_page(pdf_path, pno, mcfg, force=a.call_api)
         if resp is None:
@@ -101,40 +104,62 @@ def main():
             continue
         with pdfplumber.open(pdf_path) as pdf:
             page = pdf.pages[pno - 1]
-            oss_txt, oss_tidy, method = open_source(pdf_path, page, P)
+            oss_txt, oss_tidy, method, text_engine = open_source(pdf_path, page, P)
             conf = mean_conf(resp)
+            managed_txt = text(resp)
+            (OUT / f"{name}_text.txt").write_text(
+                f"=== OPEN SOURCE ({text_engine}; tables={method or 'none'}) ===\n"
+                f"{oss_txt}\n\n"
+                f"=== TEXTRACT ({src}) ===\n{managed_txt}\n",
+                encoding="utf-8")
             write_jsonl(to_records(resp, page, manifest[tenk.stem], pdf_path, pno, conf),
                         OUT / f"{name}.jsonl")
             man_tidy = max((clean_table(df, page_caption(page))[0] for df in tables(resp)),
                            key=len, default=pd.DataFrame(columns=oss_tidy.columns))
         stem = pdf_path.stem
         gt = ground_truth(stem, pno)
-        ref, ref_name = (gt, "ground truth") if gt else (
-            None, "no GT") if stem == "scanned" else (None, "pdfplumber text layer")
-        if ref is None and stem != "scanned":
+        ref, ref_name = (gt, "ground truth") if gt else (None, "pdfplumber text layer")
+        if ref is None:
             with pdfplumber.open(pdf_path) as pdf:
                 ref = pdf.pages[pno - 1].extract_text() or ""
         w_o = score_page(ref, oss_txt)["wer"] if ref else None
-        w_m = score_page(ref, text(resp))["wer"] if ref else None
+        w_m = score_page(ref, managed_txt)["wer"] if ref else None
+        w_pair = score_page(oss_txt, managed_txt)["wer"]
+        w_o_display = "-" if w_o is None else round(w_o, 4)
+        w_m_display = "-" if w_m is None else round(w_m, 4)
         sbs = side_by_side(oss_tidy, man_tidy)
         sbs.to_csv(OUT / f"{name}_cells.csv", index=False)
         both = sbs.dropna(subset=["open_source", "managed"])
-        md.append(f"| {name} | {pdf_path.name} p{pno} | {method} | textract ({src}, conf "
-                  f"{conf:.1f}) | {w_o if w_o is None else round(w_o, 4)} | "
-                  f"{w_m if w_m is None else round(w_m, 4)} | {ref_name} | "
+        md.append(f"| {name} | {pdf_path.name} p{pno} | {text_engine}; tables="
+                  f"{method or 'none'} | textract ({src}, conf "
+                  f"{conf:.1f}) | {w_o_display} | {w_m_display} | {round(w_pair, 4)} | "
+                  f"{ref_name} | "
                   f"{int(both['equal'].sum())} / {int((~both['equal']).sum())} / "
                   f"{int(sbs['managed'].isna().sum())} / {int(sbs['open_source'].isna().sum())} |")
     price = P["bench"]["managed_usd_per_1000_pages"]
     pages_year = P["bench"]["filings_per_year"] * P["bench"]["pages_per_filing"]
-    md += ["", "Side-by-side cells: reports/managed/*_cells.csv; schema-mapped output: "
-           "reports/managed/*.jsonl.\n", "| meter | USD / page | USD / year at "
-           f"{pages_year:,} pages |", "|---|---|---|"]
-    md += [f"| {k} | {v / 1000:.4f} | {v * pages_year / 1000:,.0f} |" for k, v in price.items()]
+    table_page = price["textract_tables"] / 1000
+    detect_page = price["textract_text"] / 1000
+    md += ["", "Text comparison files: `reports/managed/*_text.txt`; table-cell comparisons: "
+           "`reports/managed/*_cells.csv`; schema-mapped managed records: "
+           "`reports/managed/*.jsonl`.\n",
+           f"Public AWS list-price reference: [Amazon Textract pricing]("
+           "https://aws.amazon.com/textract/pricing/) (US West/Oregon, first 1M pages/month; "
+           "rates vary by Region and volume). `DetectDocumentText` is "
+           f"${detect_page:.4f}/page; this pipeline instead calls `AnalyzeDocument(TABLES)` "
+           f"at ${table_page:.4f}/page. Do not add the two prices: the table-enabled call "
+           "returns text and table blocks in one request.",
+           "", "| configured workload | pages / year | estimated USD / year |",
+           "|---|---:|---:|",
+           f"| `AnalyzeDocument(TABLES)` on every page | {pages_year:,} | "
+           f"{table_page * pages_year:,.0f} |",
+           "", "Estimate uses the configured volume and the public first-tier US West "
+           "reference price; it is not an AWS quote."]
     write_report(REPORTS / "build_vs_buy.md", "Build vs buy: managed document AI", "\n".join(md),
-                 "Errors the service fixes / introduces; data-handling questions (region, "
-                 "retention, training use); recommendation on whether and where to use it "
-                 "(the fallback triggers are ocr.managed_below_conf and "
-                 "tables.managed_below_score).")
+                 "Review data residency, retention, model training use, and client approval "
+                 "before enabling calls. Keep the managed path opt-in and use it only for "
+                 "low-confidence OCR or low-quality tables; otherwise build and operate the "
+                 "open-source extraction path.")
     print("-> reports/build_vs_buy.md")
 
 
