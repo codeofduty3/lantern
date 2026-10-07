@@ -19,3 +19,6 @@ jiwer>=3.0
 pydantic>=2
 pyyaml
 pytest
+# Serving API contract tests (tests/test_api.py); corpus assertions self-skip in CI.
+fastapi
+httpx

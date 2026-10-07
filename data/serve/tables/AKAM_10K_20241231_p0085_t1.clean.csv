@@ -1,0 +1,16 @@
+section,label,2023,2022_2,2022
+,expected term (in years),3.0,3.0,
+,risk-free interest rate,4.3,1.7,
+,akamai historical share price volatility,25.6,30.3,
+,average volatility of peer-company share price,30.6,40.7,
+(in thousands) value,"outstanding at january 1, 2024",8077.0,83.12,
+(in thousands) value,granted,5444.0,108.09,
+(in thousands) value,,,,-1.0
+(in thousands) value,vested,-5253.0,82.43,
+(in thousands) value,forfeited,-558.0,99.47,
+(in thousands) value,"outstanding at december 31, 2024",7710.0,100.04,
+"includes dsus of 26,426 shares which have vested and been distributed. excludes dsus which have vested, but have not yet been distributed.","the pre-tax intrinsic value and fair value of rsus, restricted stock and dsus were as follows (in thousands, except per share amounts)",2024.0,2022.0,
+"includes dsus of 26,426 shares which have vested and been distributed. excludes dsus which have vested, but have not yet been distributed.",pre-tax intrinsic value of awards vested,429491.0,227143.0,
+"includes dsus of 26,426 shares which have vested and been distributed. excludes dsus which have vested, but have not yet been distributed.",fair value of awards vested,433026.0,231708.0,
+"includes dsus of 26,426 shares which have vested and been distributed. excludes dsus which have vested, but have not yet been distributed.",,,,-1.0
+"includes dsus of 26,426 shares which have vested and been distributed. excludes dsus which have vested, but have not yet been distributed.","weighted average fair value of awards granted, per share",108.09,107.17,
