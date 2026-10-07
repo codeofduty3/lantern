@@ -316,8 +316,8 @@ stages:
     deps:
     - path: data/layout
       hash: md5
-      md5: 23e6eb928e3f714c86490fcaca09d63a.dir
-      size: 935240
+      md5: 63f7d21939934b33c8798f3d7d301bb0.dir
+      size: 938756
       nfiles: 5
     - path: data/raw
       hash: md5
@@ -326,8 +326,8 @@ stages:
       nfiles: 214
     - path: data/rendered
       hash: md5
-      md5: 88abcfe30b77f06220ed5f007325a9ac.dir
-      size: 2049060
+      md5: 8817d099ffe8f2defd91924233838db9.dir
+      size: 2048708
       nfiles: 3
     - path: src/common.py
       hash: md5
@@ -335,8 +335,8 @@ stages:
       size: 7933
     - path: src/export.py
       hash: md5
-      md5: 8bd519a22215bc24fe6895562c2ab21f
-      size: 6875
+      md5: 9d1b18966721f0be9b5f37422d596953
+      size: 6889
     - path: src/schema.py
       hash: md5
       md5: f640b51147d9efdc94c0b9698e8a7c6f
@@ -344,8 +344,8 @@ stages:
     outs:
     - path: data/export
       hash: md5
-      md5: fedff6a841514f8630384f81504bf574.dir
-      size: 2105670
+      md5: 57d1b638821f126d3396283a14e4d158.dir
+      size: 2105715
       nfiles: 7
   xbrl:
     cmd: python src/xbrl.py
