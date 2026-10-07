@@ -62,12 +62,17 @@ tests:                              # set from the measured baseline with a marg
 
 bench:
   max_pages: 100
-  vm_name: "8-vCPU cloud VM (assumption)"
-  vm_usd_per_hour: 0.40             # replace with the price you cite
-  gpu_vm_usd_per_hour: 1.20
+  vm_name: "8-vCPU/32-GiB CPU-only cloud VM (assumption)"
+  vm_vcpus: 8
+  vm_region: "us-east-1"
+  vm_ram_gb: 32
+  vm_usd_per_hour: 0.40             # illustrative on-demand estimate; verify at cited price page
+  vm_price_reference: "https://aws.amazon.com/ec2/pricing/on-demand/"
+  gpu_vm_usd_per_hour: 1.20         # illustrative comparison only; not used in CPU cost totals
   filings_per_year: 5000
   pages_per_filing: 100
-  managed_usd_per_1000_pages: {textract_text: 1.50, textract_tables: 15.00}  # aws.amazon.com/textract/pricing
+  managed_region: "us-east-1"
+  managed_usd_per_1000_pages: {textract_text: 1.50, textract_tables: 15.00}  # first-tier list price
 
 fixtures:
   dpi: 200

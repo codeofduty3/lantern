@@ -60,6 +60,21 @@ flowchart LR
 | 10 Benchmarks | `src/bench.py` | `data/bench/*.csv`, `reports/benchmarks.md` |
 | 11 XBRL | `src/xbrl.py`, `config/label_map.yaml`, `notebooks/xbrl_validation.ipynb` | `reports/xbrl.md` |
 
+Part 10 is run separately from `dvc repro` because model loading and timings are hardware-
+dependent. After rendered PDFs are available (for example, after `dvc pull`), run:
+
+```bash
+python src/bench.py
+```
+
+This samples up to 100 evenly spaced pages per stage, in a fresh process per stage, and writes
+per-page timings/status/RSS observations to `data/bench/*.csv`. The table stage samples only
+numeric table-candidate pages; if fewer than 50 exist, the report records that shortfall instead
+of padding the sample. The cost report uses the explicitly stated 5,000-filings/year and
+100-pages/filing assumptions; benchmark data is machine-specific. The full stage list requires
+the layout dependencies from `requirements-colab.txt`; benchmarking remains separate from
+`dvc repro`.
+
 Reports have a generated block (between `AUTO:START/END`, rewritten by the scripts) and a
 Discussion section written by the team, which the scripts never touch.
 
@@ -69,9 +84,14 @@ System packages: Tesseract (`brew install tesseract` / `apt install tesseract-oc
 (`brew install poppler` / `apt install poppler-utils`). Camelot >= 1.0 renders with pypdfium2,
 so Ghostscript is not required.
 
-The layout stage fetches its detector weights into `data/models/` on first run from the
-pinned URL in `params.yaml` (layoutparser's own catalog points at deleted Dropbox files) and
-checks the sha256 before use. On Intel macOS the newest PyTorch wheel is 2.2.2, which needs
+The layout stage is frozen in `dvc.yaml` because its LayoutParser/effdet/PyTorch stack is
+intended to run in Colab, not in the grading environment. Its outputs (`data/layout/`,
+`data/figures/`, and `data/models/`) are pushed to the DVC remote and restored by `dvc pull`;
+`dvc repro` never executes a frozen stage. If you need to regenerate layout outputs, use an
+environment with the packages in `requirements-colab.txt`, then run `dvc unfreeze layout`
+before `dvc repro`. The stage fetches detector weights from the pinned URL in `params.yaml`
+(layoutparser's own catalog points at deleted Dropbox files) and checks the sha256 before use.
+On Intel macOS the newest PyTorch wheel is 2.2.2, which needs
 the NumPy 1.x ABI, so `requirements.txt` holds `numpy`, `opencv-python` and `transformers`
 back for `darwin`/`x86_64` only; on other platforms the normal versions apply.
 

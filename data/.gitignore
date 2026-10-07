@@ -10,4 +10,5 @@
 /ground_truth
 /managed
 /models
-/bench
+/bench/*
+!/bench/*.csv

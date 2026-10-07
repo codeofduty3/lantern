@@ -22,7 +22,7 @@ import pandas as pd
 import yaml
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from common import CONFIG, DOCLING, RAW, REPORTS, TABLES, XBRL, load_manifest, write_report
+from common import CONFIG, DOCLING, RAW, REPORTS, TABLES, XBRL, load_manifest
 from tables import norm_label
 
 STATEMENTS = ("income_statement", "balance_sheet")
@@ -272,25 +272,35 @@ def validate(stem, m, facts, curated, lab2con):
 
 
 def report(cmp: pd.DataFrame):
-    rows = cmp[cmp["status"] != "no_table"]
-    md = ["## Match rate per statement and extraction path\n",
-          "| filing | statement | path | lines x periods | match | match rate |",
-          "|---|---|---|---|---|---|"]
-    for (stem, st, path), g in rows.groupby(["stem", "statement", "path"]):
-        n, k = len(g), (g["status"] == "match").sum()
-        md.append(f"| {stem} | {st} | {path} | {n} | {k} | {k / n:.1%} |")
-    for _, r in cmp[cmp["status"] == "no_table"].iterrows():
-        md.append(f"| {r['stem']} | {r['statement']} | {r['path']} | no table | - | - |")
-    md += ["", "## Mapping methods\n", rows.groupby(["path", "method"]).size()
-           .rename("cells").reset_index().to_markdown(index=False), "",
-           "## Every non-match (suggested cause; confirm and add the fix below)\n"]
-    bad = rows[rows["status"] != "match"]
-    md.append(bad[["stem", "path", "statement", "label", "period", "raw", "pdf_value",
-                   "concept", "xbrl_value", "status", "method", "suggested_cause"]]
-              .to_markdown(index=False) if len(bad) else "None.")
-    write_report(REPORTS / "xbrl.md", "XBRL validation", "\n".join(md),
-                 "For every non-match: confirmed cause (OCR, table structure, normalization, "
-                 "mapping, period alignment, extension concept, rounding) and the fix you made.")
+    rows = cmp[cmp["status"] != "no_table"].copy()
+    rows["path"] = rows["path"].replace({"traditional": "trad."})
+    rows["pdf_label"] = rows.apply(
+        lambda row: f"{row['label']} ({row['stem']}, {row['statement']}, {row['period']})",
+        axis=1)
+    rows["diagnosis"] = rows.apply(
+        lambda row: "—" if row["status"] == "match" else
+        f"Not diagnosed; suggested cause: {row['suggested_cause']}; fix pending",
+        axis=1)
+    rows = rows.rename(columns={
+        "path": "Path",
+        "pdf_label": "PDF label",
+        "concept": "Concept",
+        "pdf_value": "PDF value",
+        "xbrl_value": "XBRL value",
+        "status": "Status",
+        "method": "Mapping",
+        "diagnosis": "Diagnosed cause / fix",
+    })
+    columns = ["Path", "PDF label", "Concept", "PDF value", "XBRL value",
+               "Status", "Mapping", "Diagnosed cause / fix"]
+    md = [rows[columns].to_markdown(index=False) if len(rows) else
+          "| Path | PDF label | Concept | PDF value | XBRL value | Status | Mapping | "
+          "Diagnosed cause / fix |\n|---|---|---|---:|---:|---|---|---|\n"
+          "| — | No statement-line comparisons available | — | — | — | — | — | — |"]
+    table = "\n".join(md)
+    report = (f"# XBRL validation\n\n<!-- AUTO:START (generated, do not edit) -->\n"
+              f"{table}\n<!-- AUTO:END -->\n")
+    (REPORTS / "xbrl.md").write_text(report, encoding="utf-8")
 
 
 def main():

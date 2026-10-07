@@ -225,8 +225,10 @@ def main():
 
     metrics = {"text": {p: {k: text_mean(p, k) for k in ("wer", "cer", "num_acc")}
                         for p in ("traditional", "docling")},
-               "tables": {p: prf(*pooled[p]) if pooled[p][1] and (tabs["path"] == p).any()
-                          else {"precision": None, "recall": None, "f1": None}
+               "tables": {p: ({k: prf(*pooled[p])[k] for k in
+                               ("precision", "recall", "f1")}
+                              if pooled[p][1] and (tabs["path"] == p).any()
+                              else {"precision": None, "recall": None, "f1": None})
                           for p in ("traditional", "docling")},
                "xbrl": {p: {"match_rate": float((cmp[cmp["path"] == p]["status"] == "match")
                                                 .mean()) if (cmp["path"] == p).any() else None}
