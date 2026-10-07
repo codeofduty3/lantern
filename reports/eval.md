@@ -42,19 +42,17 @@ No ground-truth pages yet.
     "traditional": {
       "precision": 0.9468085106382979,
       "recall": 0.9468085106382979,
-      "f1": 0.9468085106382979,
-      "value_recall": 1.0
+      "f1": 0.9468085106382979
     },
     "docling": {
       "precision": 1.0,
       "recall": 1.0,
-      "f1": 1.0,
-      "value_recall": 1.0
+      "f1": 1.0
     }
   },
   "xbrl": {
     "traditional": {
-      "match_rate": 0.8906882591093117
+      "match_rate": 0.9186991869918699
     },
     "docling": {
       "match_rate": 0.9217391304347826

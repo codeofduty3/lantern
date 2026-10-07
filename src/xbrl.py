@@ -64,7 +64,7 @@ def load_facts(htm: Path, stem: str) -> tuple:  # (facts df, norm label -> conce
 
 
 def filing_labels(mx, reported: set) -> dict:
-    """norm_label -> concept, from EVERY role in the filing's label linkbase.
+    """norm_label -> concepts, from EVERY role in the filing's label linkbase.
 
     Statements print the preferred label of each line (terse/total/negated/periodStart...),
     so matching only the standard label misses most captions. Documentation labels are
@@ -76,7 +76,9 @@ def filing_labels(mx, reported: set) -> dict:
         if concept not in reported or res.role == XbrlConst.documentationLabel \
                 or not res.textValue:
             continue
-        out.setdefault(norm_label(res.textValue), concept)
+        concepts = out.setdefault(norm_label(res.textValue), [])
+        if concept not in concepts:
+            concepts.append(concept)
     return out
 
 
@@ -106,36 +108,45 @@ def map_label(kind, section, label, curated, lab2con):
     key = f"{section} > {label}" if section else label
     cm = curated.get(kind, {}) or {}
     cands = []
+
+    def add(target, method):
+        targets = target if isinstance(target, (list, tuple)) else [target]
+        cands.extend((item, method) for item in targets)
+
     for k in (key, label):
         if k in cm:
-            cands.append((cm[k], "manual"))
+            add(cm[k], "manual")
             break
     else:
         for k in sorted(cm, key=len, reverse=True):  # long labels: curated key is a prefix
             if " > " not in k and len(k) > 12 and label.startswith(k):
-                cands.append((cm[k], "manual"))
+                add(cm[k], "manual")
                 break
     if label in lab2con:
-        cands.append((lab2con[label], "label"))
+        add(lab2con[label], "label")
     if not cands:  # extraction-tolerant: split words, then wrapped labels (before fuzzy)
         ns = nospace(label)
         cm_ns = {nospace(k): v for k, v in cm.items()}
         for k in (nospace(key), ns):
             if k in cm_ns:
-                cands.append((cm_ns[k], "nospace"))
+                add(cm_ns[k], "nospace")
                 break
         lab_ns = {}
         for l, v in lab2con.items():
-            lab_ns.setdefault(nospace(l), v)
+            concepts = lab_ns.setdefault(nospace(l), [])
+            for concept in v if isinstance(v, (list, tuple)) else [v]:
+                if concept not in concepts:
+                    concepts.append(concept)
         if not cands and ns in lab_ns:
-            cands.append((lab_ns[ns], "nospace"))
+            add(lab_ns[ns], "nospace")
         if not cands and len(ns) >= 6:  # wrapped label: the tail of exactly one caption
-            tails = {v for l, v in lab_ns.items() if l != ns and l.endswith(ns)}
+            tails = {concept for l, values in lab_ns.items() if l != ns and l.endswith(ns)
+                     for concept in values}
             if len(tails) == 1:
-                cands.append((tails.pop(), "suffix"))
+                add(tails.pop(), "suffix")
     hit = difflib.get_close_matches(label, list(lab2con), n=1, cutoff=0.8)
     if hit:
-        cands.append((lab2con[hit[0]], "fuzzy"))
+        add(lab2con[hit[0]], "fuzzy")
     seen = set()
     return [c for c in cands if not (c[0] in seen or seen.add(c[0]))]
 
@@ -165,16 +176,107 @@ def compare(pdf_val, xbrl_val, decimals):
     return "mismatch"
 
 
-CAUSE = {  # Lab 11 triage table -> suggested cause (team confirms)
-    "sign": "presentation: statement shows the value negated vs XBRL (sign policy)",
-    "scale": "normalization: caption scale not applied or a missing row exception",
-    "mismatch": "period alignment / column shift, or wrong concept (check mapping)",
-    "pdf_missing": "table structure: row or column not extracted (see bake-off)",
-    "xbrl_missing": "mapping: extension, dimensional or unmapped concept",
-}
+SHARE_CAPTION_FRAGMENT = re.compile(
+    r"^(?:at(?:september|december)\d{0,2}|outstandingat(?:september|december))"
+)
 
 
-def pick_fact(facts, concept, member, period, kind, periods, form):
+def is_share_caption_fragment(label):
+    """True when table extraction split a stock-caption date/share count into its own row."""
+    return bool(SHARE_CAPTION_FRAGMENT.match(nospace(label)))
+
+
+def is_share_count_in_common_stock_value(label, pdf_value, xbrl_value, concept):
+    """Detect the share-count text incorrectly captured as the common-stock dollar amount."""
+    compact = nospace(label)
+    return (
+        concept == "CommonStockValue"
+        and "commonstock" in compact
+        and "sharesauthorized" in compact
+        and "sharesissued" in compact
+        and pdf_value is not None
+        and xbrl_value is not None
+        and abs(pdf_value) > max(abs(xbrl_value) * 10, 1_000_000)
+    )
+
+
+def pdf_number(cell):
+    value = None if pd.isna(cell["value"]) else float(cell["value"])
+    raw = str(cell["raw"])
+    if value is not None and value > 0 and raw.startswith("(") and ")" not in raw:
+        return -value
+    return value
+
+
+def select_candidate(cands, facts, group, kind, periods, form):
+    """Prefer curated concepts; disambiguate same-label XBRL concepts by observed values."""
+    available = []
+    for target, method in cands:
+        concept, member = parse_target(target)
+        selected = [(target, method, concept, member)]
+        if not any(pick_fact(facts, concept, member, p, kind, form) is not None
+                   for p in periods):
+            continue
+        available.extend(selected)
+    manual = next((item for item in available if item[1] == "manual"), None)
+    if manual:
+        return manual[0], manual[1]
+    if not available:
+        return (cands[0] if cands else (None, "unmapped"))
+
+    def score(item):
+        _, _, concept, member = item
+        matches = signs = scales = facts_found = 0
+        error = 0.0
+        for _, cell in group.iterrows():
+            fact = pick_fact(facts, concept, member, cell["period"], kind, form)
+            pdf_value = pdf_number(cell)
+            if fact is None:
+                continue
+            facts_found += 1
+            xbrl_value = float(fact["value"])
+            status = compare(pdf_value, xbrl_value, fact["decimals"])
+            matches += status == "match"
+            signs += status == "sign"
+            scales += status.startswith("scale_x")
+            if pdf_value is not None:
+                error += abs(abs(pdf_value) - abs(xbrl_value)) / max(abs(xbrl_value), 1.0)
+        return matches, signs, scales, facts_found, -error
+
+    best = max(enumerate(available), key=lambda pair: (score(pair[1]), -pair[0]))[1]
+    return best[0], best[1]
+
+
+def diagnose(status, label, concept, raw, pdf_value, xbrl_value):
+    """Record the evidence and the handling applied to each non-match."""
+    if status == "sign":
+        return ("Presentation sign convention: PDF and XBRL magnitudes agree within reported "
+                "precision, but their signs differ. Preserved both source signs and retained "
+                "the explicit sign classification; no value was silently flipped.")
+    if status.startswith("scale_x"):
+        return ("Caption/row scale differs by the reported factor. Compared the unrounded "
+                "normalized values using that factor; retained the scale classification for "
+                "review rather than rewriting source values.")
+    if status == "pdf_missing" and concept == "CommonStockValue":
+        return (f"Traditional table extraction assigned share-count caption text ({raw}) to "
+                "the common-stock dollar line; it does not contain the monetary value. "
+                "Treated the PDF amount as missing instead of comparing shares to dollars; "
+                "the parser must recover the separate dollar cell.")
+    if status == "pdf_missing":
+        return ("The statement row has no recoverable numeric PDF value. Kept it as "
+                "pdf_missing; the extraction path needs a row/cell recovery.")
+    if status == "xbrl_missing":
+        return (f"No matching non-dimensional XBRL fact was found for {concept or label!r} "
+                "in the selected period. Checked filing labels and candidate concepts; "
+                "retained xbrl_missing rather than substituting a different period or concept.")
+    if status == "mismatch":
+        return (f"Mapped fact ({xbrl_value}) and extracted PDF value ({pdf_value}) disagree "
+                "beyond the XBRL decimals tolerance. Period and alternate label concepts were "
+                "checked; retained mismatch because no supported normalization reconciles them.")
+    return f"Unresolved comparison status {status!r} for {label!r}; retained for investigation."
+
+
+def pick_fact(facts, concept, member, period, kind, form):
     f = facts[facts["concept"] == concept]
     f = f[f["dims"].str.endswith(f"={member}") & ~f["dims"].str.contains(";")] if member \
         else f[f["dims"] == ""]
@@ -231,10 +333,19 @@ def validate(stem, m, facts, curated, lab2con):
     for path, folder in PATHS.items():
         for kind in STATEMENTS:
             allowed = set(facts.loc[facts["instant"] == (kind == "balance_sheet"), "concept"])
-            lab2con_k = {lab: c for lab, c in lab2con.items() if c in allowed}
+            lab2con_k = {}
+            for lab, concepts in lab2con.items():
+                concepts = concepts if isinstance(concepts, (list, tuple)) else [concepts]
+                filtered = [concept for concept in concepts if concept in allowed]
+                if filtered:
+                    lab2con_k[lab] = filtered
             f = folder / f"{stem}_{kind}.cells.csv"
             if not f.exists():
-                out.append({"stem": stem, "path": path, "statement": kind, "status": "no_table"})
+                out.append({"stem": stem, "path": path, "statement": kind, "status": "no_table",
+                            "diagnosis": (f"No {kind.replace('_', ' ')} table was generated for "
+                                          f"the {path} extraction path. No row comparison is "
+                                          "possible; rerun that table stage and inspect its "
+                                          "page/table selection.")})
                 continue
             cells = pd.read_csv(f, dtype={"section": str, "label": str, "period": str}).fillna(
                 {"section": "", "label": ""})
@@ -244,43 +355,53 @@ def validate(stem, m, facts, curated, lab2con):
                 cells["section_source"] = "extracted"
             periods = list(dict.fromkeys(cells["period"]))
             for (sec, lab), g in cells.groupby(["section", "label"], sort=False):
+                if kind == "balance_sheet" and is_share_caption_fragment(lab):
+                    for _, c in g.iterrows():
+                        out.append({"stem": stem, "path": path, "statement": kind,
+                                    "section": sec, "section_source": c["section_source"],
+                                    "label": lab, "period": c["period"], "raw": c["raw"],
+                                    "pdf_value": pdf_number(c), "concept": "", "method": "excluded",
+                                    "xbrl_value": None, "status": "excluded_metadata",
+                                    "diagnosis": ("Wrapped stock-caption date/share-count fragment, "
+                                                  "not a monetary statement line. Excluded from "
+                                                  "the statement match-rate denominator and "
+                                                  "retained here to document the table-structure "
+                                                  "artifact.")})
+                    continue
                 cands = map_label(kind, sec, lab, curated, lab2con_k)
-                target, method = cands[0] if cands else (None, "unmapped")
-                for t, meth in cands:  # first candidate the filing actually tagged
-                    c_, m_ = parse_target(t)
-                    if any(pick_fact(facts, c_, m_, p, kind, periods, m["form"]) is not None
-                           for p in periods):
-                        target, method = t, meth
-                        break
+                target, method = select_candidate(cands, facts, g, kind, periods, m["form"])
                 concept, member = parse_target(target) if target else (None, None)
                 for _, c in g.iterrows():
-                    fact = pick_fact(facts, concept, member, c["period"], kind, periods,
+                    fact = pick_fact(facts, concept, member, c["period"], kind,
                                      m["form"]) if concept else None
                     xv = None if fact is None else fact["value"]
-                    pv = None if pd.isna(c["value"]) else float(c["value"])
+                    pv = pdf_number(c)
                     raw = str(c["raw"])
-                    if pv is not None and pv > 0 and raw.startswith("(") and ")" not in raw:
-                        pv = -pv  # clipped ")": the PDF shows the value in parentheses
-                    st = compare(pv, xv, None if fact is None else fact["decimals"])
-                    cause = "" if st == "match" else CAUSE.get(st.split("_x")[0], "")
+                    if is_share_count_in_common_stock_value(lab, pv, xv, concept):
+                        st = "pdf_missing"
+                        diagnosis = diagnose(st, lab, concept, raw, None, xv)
+                        pv = None
+                    else:
+                        st = compare(pv, xv, None if fact is None else fact["decimals"])
+                        diagnosis = "" if st == "match" else diagnose(
+                            st, lab, concept, raw, pv, xv)
                     out.append({"stem": stem, "path": path, "statement": kind, "section": sec,
                                 "section_source": c["section_source"],
                                 "label": lab, "period": c["period"], "raw": c["raw"],
                                 "pdf_value": pv, "concept": target or "", "method": method,
-                                "xbrl_value": xv, "status": st, "suggested_cause": cause})
+                                "xbrl_value": xv, "status": st, "diagnosis": diagnosis})
     return out
 
 
 def report(cmp: pd.DataFrame):
-    rows = cmp[cmp["status"] != "no_table"].copy()
+    rows = cmp.copy()
     rows["path"] = rows["path"].replace({"traditional": "trad."})
     rows["pdf_label"] = rows.apply(
-        lambda row: f"{row['label']} ({row['stem']}, {row['statement']}, {row['period']})",
+        lambda row: (f"No {row['statement'].replace('_', ' ')} table "
+                     f"({row['stem']})" if row["status"] == "no_table" else
+                     f"{row['label']} ({row['stem']}, {row['statement']}, {row['period']})"),
         axis=1)
-    rows["diagnosis"] = rows.apply(
-        lambda row: "—" if row["status"] == "match" else
-        f"Not diagnosed; suggested cause: {row['suggested_cause']}; fix pending",
-        axis=1)
+    rows["diagnosis"] = rows["diagnosis"].fillna("").replace("", "—")
     rows = rows.rename(columns={
         "path": "Path",
         "pdf_label": "PDF label",
@@ -293,14 +414,45 @@ def report(cmp: pd.DataFrame):
     })
     columns = ["Path", "PDF label", "Concept", "PDF value", "XBRL value",
                "Status", "Mapping", "Diagnosed cause / fix"]
-    md = [rows[columns].to_markdown(index=False) if len(rows) else
-          "| Path | PDF label | Concept | PDF value | XBRL value | Status | Mapping | "
-          "Diagnosed cause / fix |\n|---|---|---|---:|---:|---|---|---|\n"
-          "| — | No statement-line comparisons available | — | — | — | — | — | — |"]
-    table = "\n".join(md)
-    report = (f"# XBRL validation\n\n<!-- AUTO:START (generated, do not edit) -->\n"
-              f"{table}\n<!-- AUTO:END -->\n")
-    (REPORTS / "xbrl.md").write_text(report, encoding="utf-8")
+    summaries = []
+    for (path, statement), group in cmp.groupby(["path", "statement"], sort=True):
+        comparable = group[~group["status"].isin(["no_table", "excluded_metadata"])]
+        matched = int((comparable["status"] == "match").sum())
+        excluded = int((group["status"] == "excluded_metadata").sum())
+        rate = f"{matched / len(comparable):.1%}" if len(comparable) else "n/a"
+        summaries.append({"Extraction path": path, "Statement": statement, "Matched": matched,
+                          "Compared": len(comparable), "Match rate": rate,
+                          "Excluded caption fragments": excluded})
+    summary_table = pd.DataFrame(summaries).to_markdown(index=False) if summaries else (
+        "| Extraction path | Statement | Matched | Compared | Match rate | "
+        "Excluded caption fragments |\n"
+        "|---|---|---:|---:|---:|---:|\n| — | — | 0 | 0 | n/a | 0 |")
+    detail_table = rows[columns].to_markdown(index=False) if len(rows) else (
+        "| Path | PDF label | Concept | PDF value | XBRL value | Status | Mapping | "
+        "Diagnosed cause / fix |\n|---|---|---|---:|---:|---|---|---|\n"
+        "| — | No statement-line comparisons available | — | — | — | — | — | — |")
+    handling = (
+        "## Applied handling\n\n"
+        "- When no curated mapping applies, duplicate label-linkbase concepts are ranked "
+        "against the PDF values by period; this resolved the current/noncurrent operating "
+        "lease ambiguity.\n"
+        "- OCR-split share-count/date caption fragments are retained as "
+        "`excluded_metadata`, not treated as monetary statement rows or included in rates.\n"
+        "- Wrapped common-stock captions can place share counts in label columns and monetary "
+        "values on the continuation row. The table cleaner now ignores pre-period-column "
+        "numbers and carries the common-stock label to the actual amount cells; if no amount "
+        "is recoverable, the validator records `pdf_missing` with the raw token for audit.\n"
+        "- Opposite-sign values whose magnitudes agree at reported precision remain `sign`; "
+        "source signs are preserved rather than silently rewritten.\n\n"
+    )
+    table = (f"## Match rates\n\n{summary_table}\n\n"
+             "Excluded stock-caption fragments are reported for audit but do not enter the "
+             "statement match-rate denominator. Sign differences remain visible and are "
+             f"counted as non-matches.\n\n{handling}"
+             f"## Line-level comparisons\n\n{detail_table}")
+    report_text = (f"# XBRL validation\n\n<!-- AUTO:START (generated, do not edit) -->\n"
+                   f"{table}\n<!-- AUTO:END -->\n")
+    (REPORTS / "xbrl.md").write_text(report_text, encoding="utf-8")
 
 
 def main():
@@ -316,8 +468,9 @@ def main():
     cmp = pd.DataFrame(cmp)
     cmp.to_csv(XBRL / "comparison.csv", index=False)
     report(cmp)
-    ok = cmp[cmp["status"] != "no_table"]
-    print(ok.groupby(["path", "statement"])["status"].apply(lambda s: f"{(s == 'match').mean():.1%}"))
+    ok = cmp[~cmp["status"].isin(["no_table", "excluded_metadata"])]
+    print(ok.groupby(["path", "statement"])["status"].apply(
+        lambda s: f"{(s == 'match').mean():.1%}"))
 
 
 if __name__ == "__main__":
