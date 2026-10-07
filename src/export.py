@@ -121,14 +121,15 @@ def export_doc(stem, m):
             md.append(f"\n## {current or 'Front matter'}\n")
             txt.append(f"\n{current or ''}\n")
         src = f"<!-- {r['doc_id']} p{r['page']} {r['block_id']} -->"
+        md.append(src)
         if r["block_type"] == "Table" and r["table"]:
-            md += [src, f"<!-- scale {r['table']['scale']:g} -->", grid_md(r["table"]["raw_cells"])]
+            md += [f"<!-- scale {r['table']['scale']:g} -->", grid_md(r["table"]["raw_cells"])]
             txt += [" ".join(c for c in row if c) for row in r["table"]["raw_cells"]]
         elif r["block_type"] == "Title" and r["text"]:
-            md += [src, f"### {r['text'].strip()}"]
+            md.append(f"### {r['text'].strip()}")
             txt.append(r["text"].strip())
         elif r["text"]:
-            md += [src, r["text"].strip()]
+            md.append(r["text"].strip())
             txt.append(r["text"].strip())
     (EXPORT / f"{stem}.md").write_text("\n\n".join(md) + "\n", encoding="utf-8")
     (EXPORT / f"{stem}.txt").write_text("\n".join(txt) + "\n", encoding="utf-8")

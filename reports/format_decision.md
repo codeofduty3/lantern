@@ -7,7 +7,7 @@
 | AKAM_10K_20241231 | md       |  385412 |  384786 |           96196 |
 | AKAM_10K_20241231 | txt      |  269789 |  269163 |           67290 |
 | AKAM_10Q_20250930 | jsonl    |  385534 |  385032 |           96258 |
-| AKAM_10Q_20250930 | md       |  256881 |  256523 |           64130 |
+| AKAM_10Q_20250930 | md       |  256926 |  256568 |           64142 |
 | AKAM_10Q_20250930 | txt      |  168695 |  168337 |           42084 |
 
 approx_tokens = characters / 4.
@@ -25,8 +25,8 @@ document.
 
 | Filing | TXT tokens | Markdown | JSONL |
 |---|---|---|---|
-| 10-K (FY2024) | 66,830 | 95,448 (1.43x TXT) | 157,942 (2.36x TXT) |
-| 10-Q (Q3 2025) | 41,352 | 62,810 (1.52x TXT) | 95,808 (2.32x TXT) |
+| 10-K (FY2024) | 67,290 | 96,196 (1.43x TXT) | 159,548 (2.37x TXT) |
+| 10-Q (Q3 2025) | 42,084 | 64,142 (1.52x TXT) | 96,258 (2.29x TXT) |
 
 ### LLM retrieval test
 
@@ -51,9 +51,9 @@ right value, wrong or missing page; wrong = wrong value.
 
 | Format | Values | Pages given (original question) | Pages given (clarified) | Result |
 |---|---|---|---|---|
-| TXT | 3/3 | 7, 7, 6 | "not determinable from this file" | 3 partly correct |
-| Markdown | 3/3 | 5, 5, 3 | 6, 6, 4 | 3/3 correct |
-| JSONL | 3/3 | (asked clarified) | 6, 6, 4 | 3/3 correct |
+| TXT | Q1 $140,170; Q2 $3,113,263; Q3 $927,933 (3/3 values correct) | 7, 7, 6 | "not determinable from this file" | Values 3/3; no PDF page correct |
+| Markdown | Q1 $140,170; Q2 $3,113,263; Q3 $927,933 (3/3 values correct) | 5, 5, 3 | 6, 6, 4 | Values and PDF pages 3/3 correct after clarification |
+| JSONL | Q1 $140,170; Q2 $3,113,263; Q3 $927,933 (3/3 values correct) | (asked clarified) | 6, 6, 4 | Values and PDF pages 3/3 correct |
 
 All three formats returned the correct values. Only the formats carrying provenance could give
 the PDF page. With TXT, the model said it inferred pages from the filing's printed page
@@ -71,10 +71,10 @@ the bbox, which the Markdown labels do not carry), validated against the schema 
 identical keys across documents. The Markdown and TXT exports can be regenerated from it.
 
 **Feeds Case Study 2: Markdown.** It answered every question as accurately as JSONL, including
-exact PDF pages, at 66% of JSONL's tokens (62,810 vs 95,808). Its provenance labels let a
+exact PDF pages, at 67% of JSONL's tokens (64,142 vs 96,258). Its provenance labels let a
 retrieval system cite the page, and the block ID links back to the JSONL record for the bbox.
 
-**TXT: baseline only.** It is the smallest (41,352 tokens) and got every value right, but
+**TXT: baseline only.** It is the smallest (42,084 tokens) and got every value right, but
 without provenance an answer cannot be traced to a page.
 
 ### Limitations
