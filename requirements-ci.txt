@@ -12,6 +12,7 @@ pytesseract
 pillow
 camelot-py>=1.0
 pandas
+psutil
 tabulate
 matplotlib
 jiwer>=3.0
