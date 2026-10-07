@@ -5,8 +5,9 @@ For every rendered PDF (and the committed fixtures, for evaluation strata):
   {stem}_t{NNN}.csv (each table, export_to_dataframe), {stem}_t{NNN}.cells.csv (same normalizer
   as the traditional path), {stem}.prov.jsonl (label, page, bbox normalized to top-left points),
   {stem}_{kind}.cells.csv for primary statements, tables_index.csv, timings.csv
-Also the original iXBRL HTML of docling.html_stem -> data/docling/html/ and html_vs_pdf.csv
-(what rendering changed). Scanned fixtures get Tesseract OCR; rendered PDFs do not need OCR.
+Also the original iXBRL HTML of docling.html_stem -> data/docling/html/ (Markdown, lossless
+JSON and table CSVs) and html_vs_pdf.csv (what rendering changed). Scanned fixtures get
+Tesseract OCR; rendered PDFs do not need OCR.
 """
 import csv
 import json
@@ -126,31 +127,37 @@ def main():
 
     # the original iXBRL HTML of one filing: isolates what rendering changed
     m = load_manifest().get(cfg["html_stem"])
-    if m:
-        html_out = DOCLING / "html"
-        html_out.mkdir(exist_ok=True)
-        from docling.document_converter import DocumentConverter
-        hdoc = DocumentConverter().convert(str(ROOT / m["source_file"])).document
-        (html_out / f"{cfg['html_stem']}.md").write_text(hdoc.export_to_markdown(), encoding="utf-8")
-        pdf_tables = [r for r in index if r["stem"] == cfg["html_stem"]]
-        rows = []
-        for i, t in enumerate(hdoc.tables):
-            grid = table_grid(t, hdoc)
-            grid.to_csv(html_out / f"{cfg['html_stem']}_t{i:03d}.csv", index=False, header=False)
-            tidy, _ = clean_table(grid, "")
-            tidy.to_csv(html_out / f"{cfg['html_stem']}_t{i:03d}.cells.csv", index=False)
-            rows.append(len(tidy))
-        pdf_md = (DOCLING / f"{cfg['html_stem']}.md").read_text(encoding="utf-8")
-        html_md = (html_out / f"{cfg['html_stem']}.md").read_text(encoding="utf-8")
-        with open(DOCLING / "html_vs_pdf.csv", "w", newline="") as f:
-            w = csv.writer(f)
-            w.writerow(["metric", "rendered_pdf", "original_html"])
-            w.writerow(["tables", len(pdf_tables), len(hdoc.tables)])
-            w.writerow(["numeric_cells", sum(r["cells"] for r in pdf_tables), sum(rows)])
-            w.writerow(["markdown_chars", len(pdf_md), len(html_md)])
-            w.writerow(["pages", next((t["pages"] for t in timing if t["stem"] == cfg["html_stem"]),
-                                      ""), "n/a (HTML has no pages)"])
-        print(f"html: {len(hdoc.tables)} tables -> {html_out}")
+    if not m:
+        raise KeyError(f"configured Docling HTML filing {cfg['html_stem']} is absent "
+                       "from data/rendered/manifest.csv")
+    source = ROOT / m["source_file"]
+    if not source.is_file():
+        raise FileNotFoundError(f"original iXBRL HTML for {cfg['html_stem']} not found: {source}")
+    html_out = DOCLING / "html"
+    html_out.mkdir(exist_ok=True)
+    from docling.document_converter import DocumentConverter
+    hdoc = DocumentConverter().convert(str(source)).document
+    (html_out / f"{cfg['html_stem']}.md").write_text(hdoc.export_to_markdown(), encoding="utf-8")
+    hdoc.save_as_json(html_out / f"{cfg['html_stem']}.json")
+    pdf_tables = [r for r in index if r["stem"] == cfg["html_stem"]]
+    rows = []
+    for i, t in enumerate(hdoc.tables):
+        grid = table_grid(t, hdoc)
+        grid.to_csv(html_out / f"{cfg['html_stem']}_t{i:03d}.csv", index=False, header=False)
+        tidy, _ = clean_table(grid, "")
+        tidy.to_csv(html_out / f"{cfg['html_stem']}_t{i:03d}.cells.csv", index=False)
+        rows.append(len(tidy))
+    pdf_md = (DOCLING / f"{cfg['html_stem']}.md").read_text(encoding="utf-8")
+    html_md = (html_out / f"{cfg['html_stem']}.md").read_text(encoding="utf-8")
+    with open(DOCLING / "html_vs_pdf.csv", "w", newline="") as f:
+        w = csv.writer(f)
+        w.writerow(["metric", "rendered_pdf", "original_html"])
+        w.writerow(["tables", len(pdf_tables), len(hdoc.tables)])
+        w.writerow(["numeric_cells", sum(r["cells"] for r in pdf_tables), sum(rows)])
+        w.writerow(["markdown_chars", len(pdf_md), len(html_md)])
+        w.writerow(["pages", next((t["pages"] for t in timing if t["stem"] == cfg["html_stem"]),
+                                  ""), "n/a (HTML has no pages)"])
+    print(f"html: {len(hdoc.tables)} tables -> {html_out}")
 
     pd.DataFrame(index).to_csv(DOCLING / "tables_index.csv", index=False)
     with open(DOCLING / "timings.csv", "w", newline="") as f:

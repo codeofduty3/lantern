@@ -70,7 +70,7 @@ def stage_fns(P):
     def layout(pdf_path, page):
         from layout import detect, load_model
         if "lp" not in state:
-            state["lp"] = load_model(P["layout"]["model"])  # cold start is counted
+            state["lp"] = load_model(P["layout"])  # cold start is counted
         blocks, _ = detect(state["lp"], page, P["layout"]["dpi"], P["layout"]["score_threshold"])
         return "x" * len(blocks)
 
@@ -97,33 +97,68 @@ def summary(P):
                        f"{psutil.virtual_memory().total / 2**30:.1f} GB RAM; Python "
                        f"{platform.python_version()}")
     per_page = {}
+    stage_errors = {}
     for f in sorted(BENCH.glob("*.csv")):
         b = pd.read_csv(f)
-        warm = b[b["start"] == "warm"]
+        failed = b[b["status"] != "ok"]
+        errors = b["status"].astype(str).str.startswith("error:")
+        stage_errors[f.stem] = bool(errors.any())
+        valid = b[~errors]
+        warm = valid[valid["start"] == "warm"]
         cold = b[b["start"] == "cold"]["seconds"]
-        fails = int((b["status"] != "ok").sum())
-        p50, p95 = warm["seconds"].median(), warm["seconds"].quantile(0.95)
-        per_page[f.stem] = p50
-        rows.append(f"| {f.stem} | {len(b)} | {p50:.3f} | {p95:.3f} | {b['rss_mb'].max()} | "
-                    f"{fails} | cold first page {cold.iloc[0]:.2f}s |")
+        non_ok = len(failed)
+        if len(warm):
+            p50, p95 = warm["seconds"].median(), warm["seconds"].quantile(0.95)
+            p50_text, p95_text = f"{p50:.3f}", f"{p95:.3f}"
+            if not errors.any():
+                per_page[f.stem] = p50
+        else:
+            p50_text = p95_text = "-"
+        cold_note = f"cold first page {cold.iloc[0]:.2f}s" if len(cold) else "cold page missing"
+        rows.append(f"| {f.stem} | {len(b)} | {p50_text} | {p95_text} | {b['rss_mb'].max()} | "
+                    f"{non_ok} | {cold_note} |")
     bp = P["bench"]
     pages_year = bp["filings_per_year"] * bp["pages_per_filing"]
-    total = sum(per_page.values())
-    oss_1k = total * 1000 / 3600 * bp["vm_usd_per_hour"]
-    cost = ["| path | USD / 1,000 pages | USD / year (5,000 filings) | assumptions |",
-            "|---|---|---|---|",
-            f"| open source, sequential on {bp['vm_name']} | {oss_1k:.2f} | "
-            f"{oss_1k * pages_year / 1000:,.0f} | sum of p50 s/page over stages = {total:.2f}s; "
-            f"${bp['vm_usd_per_hour']}/h; {bp['pages_per_filing']} pages/filing; "
-            "engineering time excluded |"]
+    traditional = {"parse_pdfplumber", "tables", "layout"}
+    traditional_complete = traditional <= set(per_page) and not any(
+        stage_errors.get(stage, False) for stage in traditional)
+    text_file, table_file = BENCH / "parse_pdfplumber.csv", BENCH / "tables.csv"
+    pages = len(pd.read_csv(text_file)) if text_file.exists() else 0
+    table_pages = len(pd.read_csv(table_file)) if table_file.exists() else 0
+    table_share = table_pages / pages if pages else 0
+    traditional_s = (per_page["parse_pdfplumber"] + per_page["layout"] +
+                     per_page["tables"] * table_share) if traditional_complete and pages else None
+    docling_s = per_page.get("parse_docling")
+    docling_complete = docling_s is not None and not stage_errors.get("parse_docling", False)
+    cost = ["| path | USD / 1,000 pages | USD / year | assumptions |",
+            "|---|---:|---:|---|"]
+    for name, seconds in (("traditional stages", traditional_s),
+                          ("Docling alternate", docling_s if docling_complete else None)):
+        if seconds is None:
+            cost.append(f"| {name} on {bp['vm_name']} | unavailable | unavailable | "
+                        "incomplete or failed stage measurements |")
+            continue
+        usd_1k = seconds * 1000 / 3600 * bp["vm_usd_per_hour"]
+        assumption = (f"{seconds:.3f} s/page; ${bp['vm_usd_per_hour']}/h; "
+                      f"{bp['pages_per_filing']} pages/filing; engineering time excluded")
+        if name == "traditional stages":
+            assumption += f"; table stage weighted by {table_share:.0%} candidate-page share"
+        cost.append(f"| {name} on {bp['vm_name']} | {usd_1k:.2f} | "
+                    f"{usd_1k * pages_year / 1000:,.0f} | {assumption} |")
     for k, v in bp["managed_usd_per_1000_pages"].items():
         cost.append(f"| managed: {k} | {v:.2f} | {v * pages_year / 1000:,.0f} | list price, "
                     "first tier (aws.amazon.com/textract/pricing) |")
+    runtime = []
+    if traditional_s is not None:
+        runtime.append(f"traditional {traditional_s * pages_year / 3600:,.1f} h/year")
+    if docling_complete:
+        runtime.append(f"Docling {docling_s * pages_year / 3600:,.1f} h/year")
+    hours = ("Annual sequential runtime estimate: " + "; ".join(runtime) + "."
+             if runtime else "Annual runtime estimate unavailable: no complete path benchmark.")
     md = [f"Machine: {specs}\n",
-          "| Stage | Pages | s/page p50 | s/page p95 | Peak RSS MB | Failures | Notes |",
+          "| Stage | Pages | s/page p50 | s/page p95 | Peak RSS MB | Empty/errors | Notes |",
           "|---|---|---|---|---|---|---|", *rows, "",
-          f"Hours for {pages_year:,} pages/year, sequential: "
-          f"{total * pages_year / 3600:,.1f} h. EDGAR download is capped at 10 requests/s "
+          f"{hours} EDGAR download is capped at 10 requests/s "
           f"(~{bp['filings_per_year'] * 2 / 10 / 60:.1f} min of requests for "
           f"{bp['filings_per_year']:,} filings at ~2 requests each).\n", *cost]
     write_report(REPORTS / "benchmarks.md", "Cost and throughput benchmarks", "\n".join(md),

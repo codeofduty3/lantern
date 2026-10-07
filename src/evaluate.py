@@ -260,12 +260,47 @@ def main():
     bench = {}
     for f in BENCH.glob("*.csv"):
         b = pd.read_csv(f)
+        if "status" in b.columns:
+            b = b[~b["status"].astype(str).str.startswith("error:")]
         if len(b):
-            bench[f.stem] = float(b["seconds"].median())
+            warm = b[b["start"] == "warm"] if "start" in b.columns else b
+            if len(warm):
+                bench[f.stem] = float(warm["seconds"].median())
+    if "parse_docling" not in bench and (DOCLING / "timings.csv").exists():
+        timings = pd.read_csv(DOCLING / "timings.csv")
+        timings = timings[timings["stem"].isin(manifest)]
+        if len(timings) and timings["pages"].sum():
+            bench["parse_docling"] = float(timings["seconds"].sum() / timings["pages"].sum())
+
+    def stratum_wer(path, pattern):
+        if not len(text):
+            return "not scored (no text GT)"
+        subset = text[(text["path"] == path) &
+                      text["stratum"].astype(str).str.contains(pattern, case=False, regex=True)]
+        return fmt(float(subset["wer"].mean())) if len(subset) else "not scored (no matching GT stratum)"
+
+    def bench_coverage(stage):
+        path = BENCH / f"{stage}.csv"
+        if not path.exists():
+            return "not run"
+        sample = pd.read_csv(path)
+        status = sample["status"].astype(str)
+        empty = int((status == "empty").sum())
+        errors = int(status.str.startswith("error:").sum())
+        return f"{len(sample)} pages; {len(sample) - empty - errors} non-empty; " \
+               f"{empty} empty; {errors} errors"
+
     hv = DOCLING / "html_vs_pdf.csv"
     comp = ["| dimension | traditional | docling | source |", "|---|---|---|---|",
             f"| WER (mean) | {fmt(metrics['text']['traditional']['wer'])} | "
             f"{fmt(metrics['text']['docling']['wer'])} | eval.md |",
+            f"| reading-order WER (multi-column stratum) | "
+            f"{stratum_wer('traditional', 'multi.?col|reading.?order')} | "
+            f"{stratum_wer('docling', 'multi.?col|reading.?order')} | eval.md; "
+            "tests/fixtures/gt/CONVENTIONS.md |",
+            f"| footnote-text WER | {stratum_wer('traditional', 'footnote')} | "
+            f"{stratum_wer('docling', 'footnote')} | "
+            "eval.md; requires footnote ground-truth stratum |",
             f"| CER (mean) | {fmt(metrics['text']['traditional']['cer'])} | "
             f"{fmt(metrics['text']['docling']['cer'])} | eval.md |",
             f"| numeric accuracy | {fmt(metrics['text']['traditional']['num_acc'])} | "
@@ -277,6 +312,9 @@ def main():
             f"| s/page p50 | {fmt(bench.get('parse_pdfplumber'))} (text) / "
             f"{fmt(bench.get('tables'))} (tables) / {fmt(bench.get('layout'))} (layout) | "
             f"{fmt(bench.get('parse_docling'))} | benchmarks.md |",
+            f"| Part 10 coverage | text: {bench_coverage('parse_pdfplumber')}; "
+            f"tables: {bench_coverage('tables')}; layout: {bench_coverage('layout')} | "
+            f"{bench_coverage('parse_docling')} | data/bench/*.csv |",
             "| provenance | page + bbox per block (layout) | page + bbox per item (prov.jsonl, "
             "normalized to top-left) | data/export, data/docling |"]
     if len(text):
