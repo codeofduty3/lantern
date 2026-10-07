@@ -3,6 +3,7 @@
 Thresholds live in params.yaml (tests:) and are set from the measured baseline with a margin.
 Ground-truth files in tests/fixtures/gt/ follow tests/fixtures/gt/CONVENTIONS.md.
 """
+import os
 import sys
 from pathlib import Path
 
@@ -13,7 +14,7 @@ import yaml
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
-from evaluate import cell_set, prf, score_page  # noqa: E402
+from evaluate import cell_set, gt_dirs, prf, score_page  # noqa: E402
 from parse_text import extract_page_text, needs_ocr, page_signals  # noqa: E402
 from tables import extract_best_df, row_scale, to_number  # noqa: E402
 
@@ -84,3 +85,32 @@ def test_statement_cells_f1():
     gold = cell_set(gold_df, use_sec)
     pred = cell_set(extract_best_df(FX / "statement.pdf").astype(str), use_sec)
     assert prf(pred, gold)["f1"] >= T["min_cell_f1"]
+
+
+# ---------------------------------------------------------------- ground-truth coverage
+# The evaluated GT set must not silently shrink: when data/ground_truth is missing
+# (PR #5, and again before e131618) evaluate happily scores the CI fixture alone and
+# reports table F1 0.95 as if it improved. That number is a coverage regression, not
+# a win. CI is deliberately offline with no DVC remote, so the full-set assertion
+# only fires where the data is actually present.
+def test_ground_truth_coverage():
+    assert list(GT.glob("*_t*.gt.csv")), "fixture ground truth missing from tests/fixtures/gt"
+
+    full = ROOT / "data" / "ground_truth"
+    if not list(full.glob("*_t*.gt.csv")):
+        # smoke.yml is offline with no DVC remote, so the full set cannot exist there.
+        # Everywhere else, a missing/empty data/ground_truth is the failure this test
+        # exists to catch, so fail loudly rather than skipping past it.
+        if os.environ.get("CI"):
+            pytest.skip("data/ground_truth is not fetched in CI (offline, no DVC remote)")
+        pytest.fail("data/ground_truth is missing or empty - run `dvc pull`. Without it "
+                    "evaluate scores only tests/fixtures/gt and reports ~0.95 as if it "
+                    "improved, hiding the 188-cell ground-truth set")
+
+    cells = {}
+    for d in gt_dirs():
+        for g in sorted(d.glob("*_t*.gt.csv")):
+            gold = pd.read_csv(g, dtype=str).fillna("")
+            cells[g.name] = len(cell_set(gold, "section" in gold.columns))
+    assert len(cells) == 3, f"expected 3 ground-truth tables, found {cells}"
+    assert sum(cells.values()) == 188, f"expected 188 ground-truth cells, found {cells}"

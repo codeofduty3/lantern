@@ -53,8 +53,8 @@ stages:
     outs:
     - path: data/rendered
       hash: md5
-      md5: fde86f7cd13a2c1120706f7ec53809f9.dir
-      size: 1379170
+      md5: 88abcfe30b77f06220ed5f007325a9ac.dir
+      size: 2049060
       nfiles: 3
   parse_pdfplumber:
     cmd: python src/parse_text.py --input data/rendered tests/fixtures --out 
@@ -67,8 +67,8 @@ stages:
       nfiles: 1
     - path: data/rendered
       hash: md5
-      md5: fde86f7cd13a2c1120706f7ec53809f9.dir
-      size: 1379170
+      md5: 88abcfe30b77f06220ed5f007325a9ac.dir
+      size: 2049060
       nfiles: 3
     - path: src/common.py
       hash: md5
@@ -76,18 +76,25 @@ stages:
       size: 7933
     - path: src/managed
       hash: md5
-      md5: fdd4af42bf71d28c9cce3a7720c7d5c3.dir
-      size: 19130
-      nfiles: 5
+      md5: d83366bfa30037ccb415027364c6b152.dir
+      size: 10575
+      nfiles: 3
     - path: src/parse_text.py
       hash: md5
       md5: b8de1e5c0e1b8045d19043d842665c89
       size: 8256
-    - path: tests/fixtures
+    - path: tests/fixtures/multicol.pdf
       hash: md5
-      md5: 56c18fe4eeb1bfaea16da73cb95ea9bf.dir
-      size: 1164609
-      nfiles: 7
+      md5: f4414b24e8dccd0bb1542de19e05d2c5
+      size: 26623
+    - path: tests/fixtures/scanned.pdf
+      hash: md5
+      md5: 2038c91c21f64c687e43c0c4f6c1cf3f
+      size: 1074555
+    - path: tests/fixtures/statement.pdf
+      hash: md5
+      md5: 017c4cb5b59059683724bac6da8744e3
+      size: 57145
     params:
       params.yaml:
         managed:
@@ -105,8 +112,8 @@ stages:
     outs:
     - path: data/parsed
       hash: md5
-      md5: 35cfe8af7ee48813496c2ea1f4aaaa45.dir
-      size: 23058471
+      md5: fda20601c34417eaa51e733baabeb130.dir
+      size: 22865756
       nfiles: 171
   tables:
     cmd: python src/tables.py --input data/rendered tests/fixtures --out 
@@ -119,8 +126,8 @@ stages:
       nfiles: 1
     - path: data/rendered
       hash: md5
-      md5: fde86f7cd13a2c1120706f7ec53809f9.dir
-      size: 1379170
+      md5: 88abcfe30b77f06220ed5f007325a9ac.dir
+      size: 2049060
       nfiles: 3
     - path: src/common.py
       hash: md5
@@ -128,18 +135,25 @@ stages:
       size: 7933
     - path: src/managed
       hash: md5
-      md5: fdd4af42bf71d28c9cce3a7720c7d5c3.dir
-      size: 19130
-      nfiles: 5
+      md5: d83366bfa30037ccb415027364c6b152.dir
+      size: 10575
+      nfiles: 3
     - path: src/tables.py
       hash: md5
       md5: 1453baf9e41b19e60a00d5de92dd1e1c
       size: 18492
-    - path: tests/fixtures
+    - path: tests/fixtures/multicol.pdf
       hash: md5
-      md5: 56c18fe4eeb1bfaea16da73cb95ea9bf.dir
-      size: 1164609
-      nfiles: 7
+      md5: f4414b24e8dccd0bb1542de19e05d2c5
+      size: 26623
+    - path: tests/fixtures/scanned.pdf
+      hash: md5
+      md5: 2038c91c21f64c687e43c0c4f6c1cf3f
+      size: 1074555
+    - path: tests/fixtures/statement.pdf
+      hash: md5
+      md5: 017c4cb5b59059683724bac6da8744e3
+      size: 57145
     params:
       params.yaml:
         managed:
@@ -161,8 +175,8 @@ stages:
     outs:
     - path: data/tables
       hash: md5
-      md5: 6caf4af062c9f8ec0ede884aa74d8390.dir
-      size: 671318
+      md5: 58aad5602d7b8ee08349c64628eec2fe.dir
+      size: 675428
       nfiles: 310
   layout:
     cmd: python src/layout.py --input data/rendered tests/fixtures --out 
@@ -170,8 +184,8 @@ stages:
     deps:
     - path: data/rendered
       hash: md5
-      md5: fde86f7cd13a2c1120706f7ec53809f9.dir
-      size: 1379170
+      md5: 88abcfe30b77f06220ed5f007325a9ac.dir
+      size: 2049060
       nfiles: 3
     - path: src/common.py
       hash: md5
@@ -189,11 +203,18 @@ stages:
       hash: md5
       md5: 1453baf9e41b19e60a00d5de92dd1e1c
       size: 18492
-    - path: tests/fixtures
+    - path: tests/fixtures/multicol.pdf
       hash: md5
-      md5: 56c18fe4eeb1bfaea16da73cb95ea9bf.dir
-      size: 1164609
-      nfiles: 7
+      md5: f4414b24e8dccd0bb1542de19e05d2c5
+      size: 26623
+    - path: tests/fixtures/scanned.pdf
+      hash: md5
+      md5: 2038c91c21f64c687e43c0c4f6c1cf3f
+      size: 1074555
+    - path: tests/fixtures/statement.pdf
+      hash: md5
+      md5: 017c4cb5b59059683724bac6da8744e3
+      size: 57145
     params:
       params.yaml:
         layout:
@@ -233,8 +254,8 @@ stages:
       nfiles: 0
     - path: data/layout
       hash: md5
-      md5: 5461759f2380ebfe6bcbcec2ce4277b2.dir
-      size: 940432
+      md5: 23e6eb928e3f714c86490fcaca09d63a.dir
+      size: 935240
       nfiles: 5
     - path: data/models
       hash: md5
@@ -242,7 +263,7 @@ stages:
       size: 47104635
       nfiles: 1
   parse_docling:
-    cmd: python src/parse_docling.py
+    cmd: python src/docling_parse.py
     deps:
     - path: data/raw
       hash: md5
@@ -251,26 +272,33 @@ stages:
       nfiles: 214
     - path: data/rendered
       hash: md5
-      md5: fde86f7cd13a2c1120706f7ec53809f9.dir
-      size: 1379170
+      md5: 88abcfe30b77f06220ed5f007325a9ac.dir
+      size: 2049060
       nfiles: 3
     - path: src/common.py
       hash: md5
       md5: 4c05e83d0bd6bf8214f997ecd3b4d3ff
       size: 7933
-    - path: src/parse_docling.py
+    - path: src/docling_parse.py
       hash: md5
-      md5: 36ddf5a229fbdab132fee60fbafd121d
-      size: 8114
+      md5: 391390d18e013b928a4a3b6f56f11250
+      size: 8342
     - path: src/tables.py
       hash: md5
       md5: 1453baf9e41b19e60a00d5de92dd1e1c
       size: 18492
-    - path: tests/fixtures
+    - path: tests/fixtures/multicol.pdf
       hash: md5
-      md5: 56c18fe4eeb1bfaea16da73cb95ea9bf.dir
-      size: 1164609
-      nfiles: 7
+      md5: f4414b24e8dccd0bb1542de19e05d2c5
+      size: 26623
+    - path: tests/fixtures/scanned.pdf
+      hash: md5
+      md5: 2038c91c21f64c687e43c0c4f6c1cf3f
+      size: 1074555
+    - path: tests/fixtures/statement.pdf
+      hash: md5
+      md5: 017c4cb5b59059683724bac6da8744e3
+      size: 57145
     params:
       params.yaml:
         docling:
@@ -280,16 +308,16 @@ stages:
     outs:
     - path: data/docling
       hash: md5
-      md5: 644117b86958e257ae52c559f26ca949.dir
-      size: 15406300
-      nfiles: 648
+      md5: 4983fec87e76fb59d39bf95774309620.dir
+      size: 15420436
+      nfiles: 650
   export:
     cmd: python src/export.py
     deps:
     - path: data/layout
       hash: md5
-      md5: 5461759f2380ebfe6bcbcec2ce4277b2.dir
-      size: 940432
+      md5: 23e6eb928e3f714c86490fcaca09d63a.dir
+      size: 935240
       nfiles: 5
     - path: data/raw
       hash: md5
@@ -298,8 +326,8 @@ stages:
       nfiles: 214
     - path: data/rendered
       hash: md5
-      md5: fde86f7cd13a2c1120706f7ec53809f9.dir
-      size: 1379170
+      md5: 88abcfe30b77f06220ed5f007325a9ac.dir
+      size: 2049060
       nfiles: 3
     - path: src/common.py
       hash: md5
@@ -316,8 +344,8 @@ stages:
     outs:
     - path: data/export
       hash: md5
-      md5: a4dfbef7ac2dcace03824effa3d14b4a.dir
-      size: 2095620
+      md5: fedff6a841514f8630384f81504bf574.dir
+      size: 2105670
       nfiles: 7
   xbrl:
     cmd: python src/xbrl.py
@@ -328,9 +356,9 @@ stages:
       size: 4243
     - path: data/docling
       hash: md5
-      md5: 644117b86958e257ae52c559f26ca949.dir
-      size: 15406300
-      nfiles: 648
+      md5: 4983fec87e76fb59d39bf95774309620.dir
+      size: 15420436
+      nfiles: 650
     - path: data/raw
       hash: md5
       md5: 8e67fcb7e461f1a6b919fceba2f03465.dir
@@ -338,13 +366,13 @@ stages:
       nfiles: 214
     - path: data/rendered
       hash: md5
-      md5: fde86f7cd13a2c1120706f7ec53809f9.dir
-      size: 1379170
+      md5: 88abcfe30b77f06220ed5f007325a9ac.dir
+      size: 2049060
       nfiles: 3
     - path: data/tables
       hash: md5
-      md5: 6caf4af062c9f8ec0ede884aa74d8390.dir
-      size: 671318
+      md5: 58aad5602d7b8ee08349c64628eec2fe.dir
+      size: 675428
       nfiles: 310
     - path: src/tables.py
       hash: md5
@@ -365,13 +393,13 @@ stages:
     deps:
     - path: data/docling
       hash: md5
-      md5: 644117b86958e257ae52c559f26ca949.dir
-      size: 15406300
-      nfiles: 648
+      md5: 4983fec87e76fb59d39bf95774309620.dir
+      size: 15420436
+      nfiles: 650
     - path: data/export
       hash: md5
-      md5: a4dfbef7ac2dcace03824effa3d14b4a.dir
-      size: 2095620
+      md5: fedff6a841514f8630384f81504bf574.dir
+      size: 2105670
       nfiles: 7
     - path: data/ground_truth
       hash: md5
@@ -380,13 +408,13 @@ stages:
       nfiles: 4
     - path: data/parsed
       hash: md5
-      md5: 35cfe8af7ee48813496c2ea1f4aaaa45.dir
-      size: 23058471
+      md5: fda20601c34417eaa51e733baabeb130.dir
+      size: 22865756
       nfiles: 171
     - path: data/tables
       hash: md5
-      md5: 6caf4af062c9f8ec0ede884aa74d8390.dir
-      size: 671318
+      md5: 58aad5602d7b8ee08349c64628eec2fe.dir
+      size: 675428
       nfiles: 310
     - path: data/xbrl
       hash: md5
@@ -417,5 +445,5 @@ stages:
       size: 674
     - path: reports/plots/drift.png
       hash: md5
-      md5: d499e59e47ce1881970e4030787bfecc
-      size: 28475
+      md5: f117129b4c39f8ae255d611c18270f44
+      size: 24820

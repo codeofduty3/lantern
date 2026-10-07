@@ -15,9 +15,9 @@ Rendered PDF vs original iXBRL HTML (Docling), data/docling/html_vs_pdf.csv:
 
 | metric         |   rendered_pdf | original_html           |
 |:---------------|---------------:|:------------------------|
-| tables         |             81 | 89                      |
-| numeric_cells  |           1619 | 5259                    |
-| markdown_chars |         493654 | 1012328                 |
+| tables         |             82 | 89                      |
+| numeric_cells  |           1621 | 5255                    |
+| markdown_chars |         492985 | 1012018                 |
 | pages          |             97 | n/a (HTML has no pages) |
 <!-- AUTO:END -->
 
