@@ -500,3 +500,80 @@ Excluded stock-caption fragments are reported for audit but do not enter the sta
 | docling | total assets (AKAM_10Q_20250930, balance_sheet, 2025)                                                                                                                                                                                                        | Assets                                                                                                      |      1.08333e+10 |      1.08333e+10 | match    | manual    | —                                                                                                                                                                                                                        |
 | docling | total assets (AKAM_10Q_20250930, balance_sheet, 2024)                                                                                                                                                                                                        | Assets                                                                                                      |      1.03688e+10 |      1.03688e+10 | match    | manual    | —                                                                                                                                                                                                                        |
 <!-- AUTO:END -->
+
+## Discussion
+
+### Results
+
+The strict match rates are 98.9% for Docling balance-sheet cells, 97.3% for
+traditional balance-sheet cells, and 87.5% for income-statement cells from both paths.
+Pooled across statements, traditional matches 226 of 246 compared cells (91.9%) and
+Docling matches 212 of 230 (92.2%). The denominator is the set of extracted,
+comparable line-period cells; excluded caption fragments are reported separately.
+
+The headline rates undersell the result. Every one of the 38 non-matching cells is a
+`sign` case: the magnitude agrees with XBRL at reported precision and only the sign
+convention differs. There is not a single cell where our pipeline read a wrong number
+off the page. The income statement looks ten points worse than the balance sheet
+purely because it carries more negatively-presented rows — its 17 misses per path are
+interest expense (7), provision for income taxes (7), and other expense, net (3), all
+printed in parentheses in the statement while XBRL stores them as positive amounts.
+The only balance-sheet misses are treasury-stock rows, which have the same
+contra-equity sign issue.
+
+Why we don't just flip these signs and claim 100% is covered under normalization
+below. The rates also measure agreement with the filing's XBRL facts, not extraction
+coverage: a missing table or page does not add unmatched cells to the denominator, so
+these numbers should be read alongside the extraction reports, not instead of them.
+
+### Traditional vs. Docling
+
+The two extraction paths are effectively tied (91.9% vs. 92.2% pooled), and on the
+income statement they produce the exact same 136 comparable cells with the exact same
+17 sign cases — whatever differs between the extractors, it washes out by the time
+cells reach the validator. The real difference is on the balance sheet, where
+traditional yields 110 comparable cells against Docling's 94. Docling's higher
+balance-sheet rate (98.9% vs. 97.3%) is therefore computed on a smaller base; it
+comes from surfacing fewer of the awkward wrapped treasury-stock rows (1 sign case
+vs. 3), not from better value accuracy. Neither path has a value error, so for
+validation purposes we treat them as equivalent and keep both for cross-checking.
+
+### Matching and normalization
+
+The validator tries curated mappings first and falls back to the filing's own label
+linkbase when the dictionary comes up empty. When a label is ambiguous across several
+concepts, candidates are scored against the PDF values by period, and concepts are
+constrained by statement type; the handling section above records the cases these
+rules currently resolve.
+
+The label fallback earned its keep on "Other expense, net". In the 10-K, Akamai tags
+that line as `OtherNonoperatingExpenseNet`, which our dictionary covers. In the 10-Q
+they switched to `OtherNonoperatingIncomeExpense`, so the curated mapping found
+nothing — but the linkbase lookup recovered the concept and all four 10-Q cells
+match. Without the fallback we would have either lost those cells or had to chase
+Akamai's tagging choices filing by filing in the dictionary.
+
+Table amounts are normalized to dollars before comparison, and a dash is treated as
+zero. We deliberately do not normalize signs: equal magnitudes with opposite signs
+stay classified as `sign`, the report preserves what the source printed, and the
+strict rates count these as non-matches. Flipping signs based on concept balance
+attributes would push the headline rate to 100%, but it would also silently rewrite
+values and hide exactly the convention differences a validator exists to surface. We
+would rather report an honest 87.5% with every miss explained than a quiet 100%.
+
+### Limitations
+
+- Rates cover extracted line-period cells only, so they say nothing about
+  statement-page coverage or the completeness of the extracted tables.
+- A matching value is not proof the caption mapped to the right concept — two
+  concepts can share a value in a period. The concepts and diagnoses in the
+  line-level table are there to be inspected, not just counted.
+- `excluded_metadata` caption fragments are kept for audit but are not monetary rows
+  and never enter the match-rate denominator.
+- Everything here is tuned on two Akamai filings. The curated dictionary and the
+  handling rules would need re-validation on another issuer, though the label-linkbase
+  fallback should transfer since it uses each filing's own labels.
+
+An obvious next step would be a sign-normalization pass driven by each concept's
+balance attribute, reported as a separate lenient rate next to the strict one, and
+extending the comparison to the cash-flow statement.

@@ -118,3 +118,9 @@ def test_report_includes_match_rate_and_nonmatch_diagnosis(tmp_path, monkeypatch
     assert "Presentation sign convention" in report
     assert "Excluded stock-caption fragments" in report
     assert "No balance sheet table was generated" in report
+
+    report_path = tmp_path / "xbrl.md"
+    report_path.write_text(report + "\n## Discussion\n\nRetain this analysis.\n")
+    xbrl.report(cmp)
+
+    assert "## Discussion\n\nRetain this analysis." in report_path.read_text()
