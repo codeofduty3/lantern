@@ -22,7 +22,7 @@ import pandas as pd
 import yaml
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from common import CONFIG, DOCLING, RAW, REPORTS, TABLES, XBRL, load_manifest
+from common import CONFIG, DOCLING, RAW, REPORTS, TABLES, XBRL, load_manifest, write_report
 from tables import norm_label
 
 STATEMENTS = ("income_statement", "balance_sheet")
@@ -450,9 +450,7 @@ def report(cmp: pd.DataFrame):
              "statement match-rate denominator. Sign differences remain visible and are "
              f"counted as non-matches.\n\n{handling}"
              f"## Line-level comparisons\n\n{detail_table}")
-    report_text = (f"# XBRL validation\n\n<!-- AUTO:START (generated, do not edit) -->\n"
-                   f"{table}\n<!-- AUTO:END -->\n")
-    (REPORTS / "xbrl.md").write_text(report_text, encoding="utf-8")
+    write_report(REPORTS / "xbrl.md", "XBRL validation", table)
 
 
 def main():
