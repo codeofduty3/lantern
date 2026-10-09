@@ -380,8 +380,8 @@ stages:
       size: 19938
     - path: src/xbrl.py
       hash: md5
-      md5: da3ad3486692bf8a06aca0d052897683
-      size: 23257
+      md5: 2c4da12c68f5da2bf49ec117569017b5
+      size: 23125
     outs:
     - path: data/xbrl
       hash: md5
