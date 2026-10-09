@@ -81,8 +81,8 @@ stages:
       nfiles: 3
     - path: src/parse_text.py
       hash: md5
-      md5: b8de1e5c0e1b8045d19043d842665c89
-      size: 8256
+      md5: b81a4f0b55965d0ace77bf9bc8705b8f
+      size: 9253
     - path: tests/fixtures/multicol.pdf
       hash: md5
       md5: f4414b24e8dccd0bb1542de19e05d2c5
@@ -112,8 +112,8 @@ stages:
     outs:
     - path: data/parsed
       hash: md5
-      md5: 41f64babb7acb4017beebe7428150de9.dir
-      size: 22865750
+      md5: dc43bfa0868ae09b6436f0db9530cc9f.dir
+      size: 22865755
       nfiles: 171
   tables:
     cmd: python src/tables.py --input data/rendered tests/fixtures --out 
@@ -403,13 +403,13 @@ stages:
       nfiles: 7
     - path: data/ground_truth
       hash: md5
-      md5: 156d2423497d06977b88f4bd45ea795e.dir
-      size: 3256
-      nfiles: 3
+      md5: c48b9ad6253a5b9c9ffd781bf9bb6f21.dir
+      size: 73875
+      nfiles: 25
     - path: data/parsed
       hash: md5
-      md5: 41f64babb7acb4017beebe7428150de9.dir
-      size: 22865750
+      md5: dc43bfa0868ae09b6436f0db9530cc9f.dir
+      size: 22865755
       nfiles: 171
     - path: data/tables
       hash: md5
@@ -423,17 +423,17 @@ stages:
       nfiles: 2
     - path: src/evaluate.py
       hash: md5
-      md5: 1d9519106e35800c37b24646171e8482
-      size: 16808
+      md5: 414729bcd9857f430a70d13f4349efeb
+      size: 16985
     - path: src/tables.py
       hash: md5
       md5: 491238ce9cb5206fe1e588526654e029
       size: 19938
     - path: tests/fixtures/gt
       hash: md5
-      md5: 30df44478fa00ecad41f373823ca143b.dir
-      size: 4108
-      nfiles: 3
+      md5: d1c2e99c6e10abada4177d90504c7e74.dir
+      size: 5047
+      nfiles: 4
     params:
       params.yaml:
         evaluate:
@@ -441,8 +441,8 @@ stages:
     outs:
     - path: reports/metrics.json
       hash: md5
-      md5: b5582f6d5e9bddec7b57cb1d0cfba7e6
-      size: 620
+      md5: e3e73c6846b07d5399a3689d9c02e929
+      size: 706
     - path: reports/plots/drift.png
       hash: md5
       md5: f117129b4c39f8ae255d611c18270f44

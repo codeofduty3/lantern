@@ -22,8 +22,6 @@ sys.path.insert(0, str(REPO_ROOT / "src"))
 from common import BENCH, EXPORT, REPORTS, TABLES, XBRL  # noqa: E402
 
 DEFAULT_OUT = REPO_ROOT / "data" / "serve"
-REPORT_FILES = ["metrics.json", "eval.md", "benchmarks.md", "xbrl.md",
-                "format_decision.md", "tables_method.md", "build_vs_buy.md"]
 
 
 def _copy(src: Path, dst: Path) -> int:
@@ -64,10 +62,12 @@ def build(out: Path = DEFAULT_OUT, force: bool = False) -> dict:
     for path in sorted(BENCH.glob("*.csv")):
         total += _copy(path, out / "bench" / path.name); files += 1
 
-    # Parts 9-10: the reports the /metrics endpoint links to.
-    for name in REPORT_FILES:
-        if (REPORTS / name).exists():
-            total += _copy(REPORTS / name, out / "reports" / name); files += 1
+    # Parts 9-10: the reports the /metrics endpoint links to. Bundle every
+    # top-level report (metrics.json plus reports/*.md) so a new report never
+    # silently drops out of the bundle -- and out of the UI's Reports list.
+    for path in [REPORTS / "metrics.json", *sorted(REPORTS.glob("*.md"))]:
+        if path.exists():
+            total += _copy(path, out / "reports" / path.name); files += 1
 
     return {"out": str(out), "files": files, "bytes": total}
 

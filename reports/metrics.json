@@ -1,14 +1,14 @@
 {
   "text": {
     "traditional": {
-      "wer": null,
-      "cer": null,
-      "num_acc": null
+      "wer": 0.02769607127963085,
+      "cer": 0.017215561287520997,
+      "num_acc": 0.95274064171123
     },
     "docling": {
-      "wer": null,
-      "cer": null,
-      "num_acc": null
+      "wer": 0.15359025393051937,
+      "cer": 0.1283655280121749,
+      "num_acc": 0.8984329866394393
     }
   },
   "tables": {
