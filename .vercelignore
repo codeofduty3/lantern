@@ -1,0 +1,23 @@
+# Trim what the Vercel Python function uploads and bundles. The API only needs
+# api/, src/api/ and the frozen corpus bundle in data/serve/; everything else
+# blows past the 500 MB uncompressed function limit (venvs, DVC data, reports).
+.venv/
+.venv-serve/
+venv/
+env/
+
+.git/
+.github/
+.dvc/
+.pytest_cache/
+
+notebooks/
+docs/
+reports/
+tests/
+app/
+lantern-case-study-1/
+
+# Keep data/serve (the deployed corpus bundle); drop every other data subdir.
+data/*
+!data/serve

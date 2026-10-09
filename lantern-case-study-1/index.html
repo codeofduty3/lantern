@@ -1,0 +1,218 @@
+
+<!doctype html>
+
+<html>
+<head>
+  <meta name="viewport" content="width=device-width, minimum-scale=1.0, initial-scale=1.0, user-scalable=yes">
+  <meta name="theme-color" content="#4F7DC9">
+  <meta charset="UTF-8">
+  <title>Project LANTERN: from EDGAR filings to a validated corpus</title>
+  <link rel="stylesheet" href="//fonts.googleapis.com/css?family=Source+Code+Pro:400|Roboto:400,300,400italic,500,700|Roboto+Mono">
+  <link rel="stylesheet" href="//fonts.googleapis.com/icon?family=Material+Icons">
+  <link rel="stylesheet" href="https://storage.googleapis.com/claat-public/codelab-elements.css">
+  <style>
+    .success {
+      color: #1e8e3e;
+    }
+    .error {
+      color: red;
+    }
+  </style>
+</head>
+<body>
+  <google-codelab-analytics gaid="UA-49880327-14"></google-codelab-analytics>
+  <google-codelab codelab-gaid=""
+                  id="lantern-case-study-1"
+                  title="Project LANTERN: from EDGAR filings to a validated corpus"
+                  environment="web"
+                  feedback-link="">
+    
+      <google-codelab-step label="Overview" duration="2">
+        <p>Turn two Akamai filings (one 10-K, one 10-Q) into a layout-aware, XBRL-validated corpus: Markdown + JSONL with page/bbox provenance, versioned end to end with DVC. The DAG runs download -&gt; render -&gt; parse_pdfplumber / tables / layout / parse_docling -&gt; export + xbrl -&gt; evaluate, then a serving layer over the artifacts. The architecture diagram and the Part-by-Part map to code and reports are in the README.</p>
+
+
+      </google-codelab-step>
+    
+      <google-codelab-step label="Part 0 - Download and render" duration="5">
+        <pre><code language="language-bash" class="language-bash">dvc repro download render
+</code></pre>
+<p>Screenshot: <code>data/rendered/manifest.csv</code> and one rendered page.</p>
+
+
+      </google-codelab-step>
+    
+      <google-codelab-step label="Part 1 - Text extraction with OCR fallback" duration="5">
+        <p>pdfplumber reads the text layer; a page routes to Tesseract only when a trigger fires (<code>ocr.min_chars: 100</code>, <code>junk_ratio: 0.2</code>, <code>image_area: 0.6</code>). Calibration is in <code>reports/ocr_calibration.md</code>: the native pages carry at least 334 chars, so any cutoff from 2 to 334 makes the same decision (100 is a conservative choice inside the gap), and 200 DPI gave the lowest WER (<code>--oem 1 --psm 6</code>). Of the 160 filing pages, 159 stay on the text layer and one (10-Q page 2) routes to OCR; the three scanned fixture pages all route to OCR. Evidence: <code>data/parsed/ocr_log.csv</code> (reason, chars, junk_ratio, image_ratio, OCR confidence per page).</p>
+
+
+      </google-codelab-step>
+    
+      <google-codelab-step label="Part 2 - Tables and the hybrid extractor" duration="5">
+        <pre><code language="language-bash" class="language-bash">python src/bakeoff.py       # Camelot lattice/stream/network vs pdfplumber, one normalizer
+</code></pre>
+<p>Each table-candidate page is extracted with every method; the winner is the highest <code>accuracy - 0.5*whitespace</code> above a coverage floor (<code>tables.accept_score: 80</code>, <code>min_coverage: 0.6</code>). The winner depends on table type - on the 10-K income statement, stream and network both reach 100% number coverage while lattice reaches 73% - and no single method wins everywhere: stream is the most common winner, lattice takes equity, and network takes 22 of the &#34;other table&#34; pages. Evidence: <code>reports/tables_method.md</code>, <code>data/tables/tables_log.csv</code>, clean grids in <code>data/tables/*.clean.csv</code>.</p>
+
+
+      </google-codelab-step>
+    
+      <google-codelab-step label="Part 3 - Layout detection and routing" duration="5">
+        <p>EfficientDet (PubLayNet) labels every region - Title, Text, List, Table, Figure - and assigns reading order, including multi-column pages; the label routes the block (body text to pdfplumber, tables to Camelot). Box overlays for the 10 audited pages are in <code>reports/layout/</code>. Audit numbers (<code>reports/layout_audit.md</code>): Text precision/recall 0.91, Title 1.00, Table 0.83 - one missed box and one mistyped box, the weakest class, which is exactly why tables get a dedicated extractor and an XBRL cross-check. Multi-column reading-order WER is 0.000.</p>
+
+
+      </google-codelab-step>
+    
+      <google-codelab-step label="Part 4 - Docling" duration="5">
+        <p>The same corpus through Docling, scored against the Part 9 ground truth (<code>reports/docling_comparison.md</code>). Docling leads on the gold statement tables (cell F1 1.000 vs 0.947) and XBRL match rate (0.922 vs 0.919); our pipeline leads on text (WER 0.028 vs 0.154, CER 0.017 vs 0.128), the footnote stratum (0.002 vs 0.229), and speed (layout p50 0.641 s/page vs 3.050). Decision: keep the traditional layout-aware pipeline primary, Docling as the table-focused fallback. Rendering also loses content - the rendered PDF yields 82 tables and 1,487 numeric cells vs 89 and 2,788 in the original iXBRL HTML.</p>
+
+
+      </google-codelab-step>
+    
+      <google-codelab-step label="Part 5 - Metadata and provenance" duration="3">
+        <p>Every block we extract is saved as a JSONL record that says where it came from. Each record must pass the schema in <code>src/schema.py</code> before it&#39;s written, so bad data stops the stage instead of slipping through.</p>
+<pre><code language="language-bash" class="language-bash">dvc repro export
+head -c 400 data/export/AKAM_10K_20241231.jsonl
+</code></pre>
+<p>A record from the 10-K:</p>
+<pre><code language="language-json" class="language-json">{
+  &#34;doc_id&#34;: &#34;0001086222-25-000028&#34;,
+  &#34;cik&#34;: &#34;0001086222&#34;,
+  &#34;form&#34;: &#34;10-K&#34;,
+  &#34;fiscal_year&#34;: 2024,
+  &#34;fiscal_period&#34;: &#34;FY&#34;,
+  &#34;page&#34;: 13,
+  &#34;section&#34;: &#34;Item 1A. Risk Factors&#34;,
+  &#34;block_id&#34;: &#34;p0013_b002&#34;,
+  &#34;bbox&#34;: [0.85, 368.0, 560.89, 387.01],
+  &#34;text&#34;: &#34;Defects or disruptions in our products and IT systems could require us to increase spending ...&#34;,
+  &#34;extractor&#34;: &#34;pdfplumber&#34;
+}
+</code></pre>
+<p>The section comes from the 10-K&#39;s &#34;Item N.&#34; headings, read from every line of the PDF so headings the layout model missed still count.</p>
+<p>The Markdown file carries the same address in a comment:</p>
+<pre><code language="language-markdown" class="language-markdown">&lt;!-- 0001086222-25-000028 p13 p0013_b002 --&gt;
+Defects or disruptions in our products and IT systems could require us to increase spending ...
+</code></pre>
+<p>All 811 records validate, both filings have the same fields, and every Markdown line leads back to a page and a box.</p>
+
+
+      </google-codelab-step>
+    
+      <google-codelab-step label="Part 6 - Storage formats" duration="2">
+        <p>We save the same content as JSONL, Markdown and plain text, and compare their size.</p>
+<pre><code language="language-bash" class="language-bash">cat data/export/format_sizes.csv
+</code></pre>
+<table>
+<tr><td colspan="1" rowspan="1"><p>format</p>
+</td><td colspan="1" rowspan="1"><p>approx. tokens, 10-K</p>
+</td><td colspan="1" rowspan="1"><p>vs TXT</p>
+</td></tr>
+<tr><td colspan="1" rowspan="1"><p>txt</p>
+</td><td colspan="1" rowspan="1"><p>67,205</p>
+</td><td colspan="1" rowspan="1"><p>1.0x</p>
+</td></tr>
+<tr><td colspan="1" rowspan="1"><p>md</p>
+</td><td colspan="1" rowspan="1"><p>96,311</p>
+</td><td colspan="1" rowspan="1"><p>1.43x</p>
+</td></tr>
+<tr><td colspan="1" rowspan="1"><p>jsonl</p>
+</td><td colspan="1" rowspan="1"><p>159,585</p>
+</td><td colspan="1" rowspan="1"><p>2.37x</p>
+</td></tr>
+</table>
+<p>We asked ChatGPT three questions about the 10-Q in each format. All three got the numbers right, but only Markdown and JSONL could give the correct page.</p>
+<p>JSONL is our source of truth because it keeps every field. Markdown feeds Case Study 2 because it keeps the page labels at far fewer tokens. Details are in <code>reports/format_decision.md</code>.</p>
+
+
+      </google-codelab-step>
+    
+      <google-codelab-step label="Part 7 - Build vs buy" duration="4">
+        <p>Compare the clean and scanned statement pages in <code>reports/build_vs_buy.md</code>, including text and table-cell outputs under <code>reports/managed/</code>. The script reads page-hash cache entries by default:</p>
+<pre><code language="language-bash" class="language-bash">python src/managed/compare.py
+</code></pre>
+<p>To populate the cache, explicitly allow the two Textract requests:</p>
+<pre><code language="language-bash" class="language-bash">python src/managed/compare.py --call-api
+dvc add data/managed
+</code></pre>
+<p>Review the provider pricing and client-document data-handling questions in the report before enabling live calls. <code>managed.enabled: false</code> remains the default; DVC stages can use cache hits but make no API calls when the cache misses.</p>
+
+
+      </google-codelab-step>
+    
+      <google-codelab-step label="Part 8 - DVC pipeline and CI" duration="4">
+        <p><code>dvc.yaml</code> defines the DAG (<code>dvc dag</code> to view it). Data - raw, rendered, parsed, layout, docling, xbrl, ground truth and the managed cache - is DVC-tracked on the shared S3 remote, so <code>dvc repro</code> is idempotent: the first run restores or reruns, the second skips every stage. The <code>layout</code> stage is frozen (its Colab-only stack) and restored by <code>dvc pull</code>. CI (<code>.github/workflows/smoke.yml</code>) runs offline on every PR against the committed fixtures - no EDGAR, no DVC remote, no credentials. Evidence: <code>dvc.lock</code>, green smoke run.</p>
+
+
+      </google-codelab-step>
+    
+      <google-codelab-step label="Part 9 - Evaluation" duration="4">
+        <pre><code language="language-bash" class="language-bash">dvc repro evaluate
+dvc metrics diff
+</code></pre>
+<p><code>src/evaluate.py</code> scores WER/CER/numeric accuracy per page and stratum, table cell P/R/F1, and the XBRL match rate into <code>reports/metrics.json</code> and <code>reports/eval.md</code>. Corpus result: traditional text WER 0.028 / CER 0.017, table cell F1 0.947, XBRL match rate 0.919. Regression tests (<code>tests/test_quality.py</code>) fail on drift against the <code>tests:</code> thresholds in <code>params.yaml</code> (<code>max_wer_text: 0.10</code>, <code>max_wer_scanned: 0.15</code>, <code>min_cell_f1: 0.90</code>); we proved they have teeth by breaking the multi-column extractor and watching <code>test_text_wer[multicol-1-0.1]</code> fail (<code>1.0 <= 0.1</code>). Drift plot: <code>reports/plots/drift.png</code>.</p>
+
+
+      </google-codelab-step>
+    
+      <google-codelab-step label="Part 10 - Benchmarks" duration="3">
+        <pre><code language="language-bash" class="language-bash">python src/bench.py
+</code></pre>
+<p>Run separately because timings are hardware-dependent: a fresh process per stage, up to 100 pages (75 table-candidate pages). Warm p50 - text 0.016 s/page, layout 0.641, tables 1.182, Docling 3.050; cold first page - layout 8.96 s, Docling 20.68 s. Layout peaks near 3.4 GB, so concurrency is capped at 6 workers under a 70% RAM budget. Cost is about $0.13 per 1,000 pages (~$67/year) for the traditional stages and $0.34 (~$169/year) for Docling on the assumed 8-vCPU/32-GiB VM. Report: <code>reports/benchmarks.md</code>.</p>
+
+
+      </google-codelab-step>
+    
+      <google-codelab-step label="Part 11 - XBRL validation" duration="4">
+        <p>We check the numbers our pipeline read from the PDF tables against the filing&#39;s own XBRL tags, which Arelle reads for us.</p>
+<pre><code language="language-bash" class="language-bash">dvc repro xbrl
+dvc metrics show
+</code></pre>
+<p>Each table row is matched to an XBRL concept using our dictionary first, then the filing&#39;s own labels, then fuzzy matching. Then the values are compared.</p>
+<table>
+<tr><td colspan="1" rowspan="1"><p>path</p>
+</td><td colspan="1" rowspan="1"><p>statement</p>
+</td><td colspan="1" rowspan="1"><p>matched / compared</p>
+</td><td colspan="1" rowspan="1"><p>rate</p>
+</td></tr>
+<tr><td colspan="1" rowspan="1"><p>traditional</p>
+</td><td colspan="1" rowspan="1"><p>balance_sheet</p>
+</td><td colspan="1" rowspan="1"><p>107 / 110</p>
+</td><td colspan="1" rowspan="1"><p>97.3%</p>
+</td></tr>
+<tr><td colspan="1" rowspan="1"><p>traditional</p>
+</td><td colspan="1" rowspan="1"><p>income_statement</p>
+</td><td colspan="1" rowspan="1"><p>119 / 136</p>
+</td><td colspan="1" rowspan="1"><p>87.5%</p>
+</td></tr>
+<tr><td colspan="1" rowspan="1"><p>docling</p>
+</td><td colspan="1" rowspan="1"><p>balance_sheet</p>
+</td><td colspan="1" rowspan="1"><p>93 / 94</p>
+</td><td colspan="1" rowspan="1"><p>98.9%</p>
+</td></tr>
+<tr><td colspan="1" rowspan="1"><p>docling</p>
+</td><td colspan="1" rowspan="1"><p>income_statement</p>
+</td><td colspan="1" rowspan="1"><p>119 / 136</p>
+</td><td colspan="1" rowspan="1"><p>87.5%</p>
+</td></tr>
+</table>
+<p>Most of what&#39;s left is a sign convention, not an error: the statement shows an expense as <code>(27,117)</code>, while XBRL stores it as a positive number.</p>
+<p>One fix: &#34;Other expense, net&#34; failed on the 10-Q because Akamai tagged it with a different concept than in the 10-K. Letting the search fall back to the filing&#39;s own labels fixed it without touching the dictionary. Every remaining mismatch is explained in <code>reports/xbrl.md</code>.</p>
+
+
+      </google-codelab-step>
+    
+      <google-codelab-step label="Part 12 - Serving layer (API &#43; UI)" duration="4">
+        <p><code>uvicorn src.api.main:app</code> serves the corpus as JSON with Swagger at <code>/docs</code>; <code>streamlit run app/streamlit_app.py</code> is the browser UI. Show <code>/health</code>, run one <code>/search</code> from the Swagger <strong>Try it out</strong> button, then the Streamlit explorer. Deployment (Replit API, Vercel API, Streamlit Cloud UI) is in <code>docs/serving.md</code>.</p>
+
+
+      </google-codelab-step>
+    
+  </google-codelab>
+
+  <script src="https://storage.googleapis.com/claat-public/native-shim.js"></script>
+  <script src="https://storage.googleapis.com/claat-public/custom-elements.min.js"></script>
+  <script src="https://storage.googleapis.com/claat-public/prettify.js"></script>
+  <script src="https://storage.googleapis.com/claat-public/codelab-elements.js"></script>
+  <script src="//support.google.com/inapp/api.js"></script>
+
+</body>
+</html>
