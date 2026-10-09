@@ -1,0 +1,27 @@
+{
+  "environment": "web",
+  "format": "html",
+  "prefix": "https://storage.googleapis.com",
+  "mainga": "UA-49880327-14",
+  "updated": "2026-10-09T08:02:13-07:00",
+  "id": "lantern-case-study-1",
+  "duration": 58,
+  "title": "Project LANTERN: from EDGAR filings to a validated corpus",
+  "authors": "codeofduty3",
+  "summary": "Project LANTERN - financial report parsing pipeline",
+  "source": "docs/codelab.md",
+  "theme": "",
+  "status": [
+    "published"
+  ],
+  "category": [
+    "data-engineering"
+  ],
+  "tags": [
+    "dvc",
+    "pdf",
+    "web",
+    "xbrl"
+  ],
+  "url": "lantern-case-study-1"
+}
