@@ -10,7 +10,7 @@
 | numeric accuracy | 0.953 | 0.898 | eval.md |
 | table cell F1 | 0.947 | 1.000 | eval.md |
 | XBRL match rate | 0.919 | 0.922 | xbrl.md |
-| s/page p50 | - (text) / - (tables) / 0.641 (layout) | 3.050 | benchmarks.md |
+| s/page p50 | 0.016 (text) / 1.182 (tables) / 0.641 (layout) | 3.050 | benchmarks.md |
 | Part 10 coverage | text: 100 pages; 100 non-empty; 0 empty; 0 errors; tables: 75 pages; 75 non-empty; 0 empty; 0 errors; layout: 100 pages; 98 non-empty; 2 empty; 0 errors | 100 pages; 99 non-empty; 1 empty; 0 errors | data/bench/*.csv |
 | provenance | page + bbox per block (layout) | page + bbox per item (prov.jsonl, normalized to top-left) | data/export, data/docling |
 
@@ -42,37 +42,43 @@ Rendered PDF vs original iXBRL HTML (Docling), data/docling/html_vs_pdf.csv:
 
 ### Measured comparison and coverage
 
-The available Part 9 table ground truth gives Docling cell F1 **1.000** versus **0.947**
-for the traditional extractor (188 gold cells across the 10-K statement pages and fixture);
-the XBRL match rate is **0.922** versus **0.919**. Those results favor Docling for
-statement-table recovery, but they do not establish better table geometry or general
-reading order. `data/ground_truth/strata.csv` currently has no text pages, so mean WER/CER,
-multi-column reading-order WER, and footnote-text WER are **not scored**; the discussion
-must not treat their blank values as ties or successes. Docling's page-specific Markdown
-and the traditional parser's page text are already saved for scoring after ground truth
-is transcribed.
+The Part 9 ground truth now covers both tables and text. On the gold statement tables,
+Docling's cell F1 is **1.000** versus **0.947** for the traditional extractor (188 gold
+cells across the 10-K statement pages and fixture), and its XBRL match rate is **0.922**
+versus **0.919**. Those results favor Docling for statement-table recovery, but they do
+not establish better table geometry.
+
+Text flips the ranking. Across the 22 transcribed pages in `data/ground_truth/strata.csv`
+(twenty filing pages -- one per stratum per filing -- plus the scanned and multi-column
+fixtures), the traditional parser scores mean WER **0.028** / CER **0.017** / numeric
+accuracy **0.953**, against Docling's **0.154** / **0.128** / **0.898**. The footnote
+stratum is the widest gap, **0.002** versus **0.229**, and reading order on the
+multi-column fixture is a **0.000** tie. The sample is one page per stratum, so read the
+means as directional rather than exhaustive.
 
 Both paths expose page and bounding-box provenance: traditional blocks in `data/layout/`
 and exported records, and Docling item provenance in per-filing `.prov.jsonl` files using
-top-left point coordinates. On the Part 10 100-page sample, warm p50 was 0.370 s/page for
-traditional text, 0.502 for layout, and 1.012 on 45 table-candidate pages; Docling was
-1.590 s/page. Weighting the table stage by its 45% candidate-page share gives an estimated
-1.328 s/page for traditional sequential stages versus 1.590 for Docling; this is a
-stage-median estimate, not a separately instrumented end-to-end run. Both layout and
-Docling had one empty result on the same blank 10-Q page 2 and no runtime exceptions.
-The HTML/PDF comparison shows 82 vs 89 detected tables and 1,621 vs 5,255 normalized
-numeric cells, respectively, plus 492,985 vs 1,012,018 Markdown characters. This
-isolates substantial content loss/compaction during rendering, but HTML has no pagination
-and the counts do not by themselves imply better structural accuracy.
+top-left point coordinates. On the Part 10 sample (100 pages for text/layout/Docling, 75
+table-candidate pages), warm p50 was 0.016 s/page for traditional text, 0.641 for layout,
+and 1.182 on tables; Docling was 3.050 s/page. Weighting the table stage by its 46.9%
+candidate-page share gives an estimated 1.211 s/page for traditional sequential stages
+versus 3.050 for Docling; this is a stage-median estimate, not a separately instrumented
+end-to-end run. Layout returned two empty results (the blank 10-Q pages 2 and 7) and
+Docling one (10-Q page 2), with no runtime exceptions. The HTML/PDF comparison shows 82
+vs 89 detected tables and 1,487 vs 2,788 normalized numeric cells, respectively, plus
+492,985 vs 1,012,018 Markdown characters. This isolates substantial content
+loss/compaction during rendering, but HTML has no pagination and the counts do not by
+themselves imply better structural accuracy.
 
 ### Recommendation to Lina
 
 Keep the traditional layout-aware pipeline as the primary corpus path and Docling as the
 table-focused alternate/fallback for now. The traditional sequential stage estimate is
-faster (1.328 vs 1.590 s/page), while Docling leads on the available table-cell F1 and
-XBRL match rate; no text or footnote ground-truth pages exist to compare reading order or
-footnote fidelity. Revisit the primary-path choice after collecting those missing Part 9
-measurements and validating the table-weighted throughput estimate end-to-end.
+faster (1.211 vs 3.050 s/page), and it leads on text WER/CER, numeric accuracy and the
+footnote stratum, while Docling leads on the gold table-cell F1 and XBRL match rate. The
+two paths tie on the single multi-column reading-order fixture. Revisit the primary-path
+choice if broader text ground truth moves the footnote or reading-order result, or once
+the table-weighted throughput estimate is validated end-to-end.
 
 ### Scanned fixture backend
 
@@ -95,5 +101,6 @@ three pages.
 Two caveats stay on the record. That comparison changes backend and docling-parse patch
 version at once, so the 17 characters are not attributed to either one — swapping only the
 backend on the Linux machine, or diffing the two `scanned.md` files, settles it. And the
-scanned fixture feeds no scored metric (its ground truth is not transcribed), so the
-deviation moves no number in `reports/metrics.json`.
+scanned fixture is no longer unscored: its transcribed page is the `scanned` stratum in
+`reports/eval.md` (traditional WER 0.016, Docling 0.150), so that 0.12% backend deviation
+now sits inside a scored row and should be kept in view when reading it.

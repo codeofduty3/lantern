@@ -265,9 +265,11 @@ def main():
         if "status" in b.columns:
             b = b[~b["status"].astype(str).str.startswith("error:")]
         if len(b):
+            # Model stages mark a cold first page; use the warm pages when they
+            # exist, otherwise the whole sample (text/tables have no warm-up).
             warm = b[b["start"] == "warm"] if "start" in b.columns else b
-            if len(warm):
-                bench[f.stem] = float(warm["seconds"].median())
+            sample = warm if len(warm) else b
+            bench[f.stem] = float(sample["seconds"].median())
     if "parse_docling" not in bench and (DOCLING / "timings.csv").exists():
         timings = pd.read_csv(DOCLING / "timings.csv")
         timings = timings[timings["stem"].isin(manifest)]
