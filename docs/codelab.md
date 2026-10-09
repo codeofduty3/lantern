@@ -110,8 +110,6 @@ The Markdown file carries the same address in a comment:
 Defects or disruptions in our products and IT systems could require us to increase spending ...
 ```
 
-![Page 13 of the 10-K with block p0013_b002 boxed](img/part5_bbox.png)
-
 All 811 records validate, both filings have the same fields, and every Markdown line leads back to a page and a box.
 
 ## Part 6 - Storage formats
@@ -122,8 +120,6 @@ We save the same content as JSONL, Markdown and plain text, and compare their si
 ```bash
 cat data/export/format_sizes.csv
 ```
-
-![format_sizes.csv for both filings](img/part6_format_sizes.png)
 
 | format | approx. tokens, 10-K | vs TXT |
 |---|---|---|
@@ -205,8 +201,6 @@ We check the numbers our pipeline read from the PDF tables against the filing's 
 dvc repro xbrl
 dvc metrics show
 ```
-
-![reports/metrics.json with the XBRL match rates](img/part11_metrics.png)
 
 Each table row is matched to an XBRL concept using our dictionary first, then the filing's own labels, then fuzzy matching. Then the values are compared.
 

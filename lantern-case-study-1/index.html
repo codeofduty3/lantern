@@ -36,7 +36,7 @@
       <google-codelab-step label="Part 0 - Download and render" duration="5">
         <pre><code language="language-bash" class="language-bash">dvc repro download render
 </code></pre>
-<p>Pinned in <code>params.yaml</code>: AKAM, one 10-K and one 10-Q inside 2024-01-01..2026-01-01. Download fetches the EDGAR submissions plus the iXBRL (<code>.xsd</code> + linkbases); render prints each filing to a Letter PDF with headless Chromium. Evidence: <code>data/rendered/manifest.csv</code> (stem, accession, CIK, sha256, renderer) - 2 filings, 97 and 63 pages.</p>
+<p>Screenshot: <code>data/rendered/manifest.csv</code> and one rendered page.</p>
 
 
       </google-codelab-step>
@@ -67,33 +67,73 @@
 
       </google-codelab-step>
     
-      <google-codelab-step label="Part 5 - Metadata and provenance" duration="4">
-        <p>Every block is one JSONL record carrying the filing identity, page, section, <code>block_type</code>, <code>bbox</code>, extractor, OCR flag and source hash, validated against <code>src/schema.py</code> (<code>lantern/1.0</code>). The Markdown export repeats the provenance as an HTML comment.</p>
-<p>Record shape from <code>data/export/AKAM_10K_20241231.jsonl</code> (fields trimmed):</p>
-<pre><code language="language-json" class="language-json">{&#34;schema&#34;:&#34;lantern/1.0&#34;,&#34;doc_id&#34;:&#34;0001086222-25-000028&#34;,&#34;ticker&#34;:&#34;AKAM&#34;,&#34;form&#34;:&#34;10-K&#34;,
- &#34;page&#34;:1,&#34;section&#34;:&#34;FORM 10-K&#34;,&#34;block_id&#34;:&#34;p0001_b001&#34;,&#34;block_type&#34;:&#34;Title&#34;,
- &#34;bbox&#34;:[263.14,112.24,348.07,130.74],&#34;origin&#34;:&#34;top-left&#34;,&#34;text&#34;:&#34;FORM 10-K&#34;,
- &#34;extractor&#34;:&#34;pdfplumber&#34;,&#34;ocr&#34;:false,&#34;sha256&#34;:&#34;4a433d25...e697&#34;}
+      <google-codelab-step label="Part 5 - Metadata and provenance" duration="3">
+        <p>Every block we extract is saved as a JSONL record that says where it came from. Each record must pass the schema in <code>src/schema.py</code> before it&#39;s written, so bad data stops the stage instead of slipping through.</p>
+<pre><code language="language-bash" class="language-bash">dvc repro export
+head -c 400 data/export/AKAM_10K_20241231.jsonl
 </code></pre>
-<pre><code language="language-markdown" class="language-markdown">&lt;!-- 0001086222-25-000028 p1 p0001_b001 --&gt;
-### FORM 10-K
+<p>A record from the 10-K:</p>
+<pre><code language="language-json" class="language-json">{
+  &#34;doc_id&#34;: &#34;0001086222-25-000028&#34;,
+  &#34;cik&#34;: &#34;0001086222&#34;,
+  &#34;form&#34;: &#34;10-K&#34;,
+  &#34;fiscal_year&#34;: 2024,
+  &#34;fiscal_period&#34;: &#34;FY&#34;,
+  &#34;page&#34;: 13,
+  &#34;section&#34;: &#34;Item 1A. Risk Factors&#34;,
+  &#34;block_id&#34;: &#34;p0013_b002&#34;,
+  &#34;bbox&#34;: [0.85, 368.0, 560.89, 387.01],
+  &#34;text&#34;: &#34;Defects or disruptions in our products and IT systems could require us to increase spending ...&#34;,
+  &#34;extractor&#34;: &#34;pdfplumber&#34;
+}
 </code></pre>
+<p>The section comes from the 10-K&#39;s &#34;Item N.&#34; headings, read from every line of the PDF so headings the layout model missed still count.</p>
+<p>The Markdown file carries the same address in a comment:</p>
+<pre><code language="language-markdown" class="language-markdown">&lt;!-- 0001086222-25-000028 p13 p0013_b002 --&gt;
+Defects or disruptions in our products and IT systems could require us to increase spending ...
+</code></pre>
+<p>All 811 records validate, both filings have the same fields, and every Markdown line leads back to a page and a box.</p>
 
 
       </google-codelab-step>
     
-      <google-codelab-step label="Part 6 - Storage formats" duration="3">
-        <p><code>reports/format_decision.md</code> holds the sizes and token counts: relative to TXT, Markdown costs about 1.4-1.5x the tokens and JSONL about 2.3x. In an LLM retrieval test (AKAM 10-Q, three value-plus-page questions, a fresh chat per format) all three formats returned the right values, but only Markdown and JSONL could cite the PDF page - TXT carries no provenance. Decision: JSONL is the source of truth (bbox + schema), Markdown feeds Case Study 2 (page cites at 67% of the tokens), TXT is a baseline only.</p>
+      <google-codelab-step label="Part 6 - Storage formats" duration="2">
+        <p>We save the same content as JSONL, Markdown and plain text, and compare their size.</p>
+<pre><code language="language-bash" class="language-bash">cat data/export/format_sizes.csv
+</code></pre>
+<table>
+<tr><td colspan="1" rowspan="1"><p>format</p>
+</td><td colspan="1" rowspan="1"><p>approx. tokens, 10-K</p>
+</td><td colspan="1" rowspan="1"><p>vs TXT</p>
+</td></tr>
+<tr><td colspan="1" rowspan="1"><p>txt</p>
+</td><td colspan="1" rowspan="1"><p>67,205</p>
+</td><td colspan="1" rowspan="1"><p>1.0x</p>
+</td></tr>
+<tr><td colspan="1" rowspan="1"><p>md</p>
+</td><td colspan="1" rowspan="1"><p>96,311</p>
+</td><td colspan="1" rowspan="1"><p>1.43x</p>
+</td></tr>
+<tr><td colspan="1" rowspan="1"><p>jsonl</p>
+</td><td colspan="1" rowspan="1"><p>159,585</p>
+</td><td colspan="1" rowspan="1"><p>2.37x</p>
+</td></tr>
+</table>
+<p>We asked ChatGPT three questions about the 10-Q in each format. All three got the numbers right, but only Markdown and JSONL could give the correct page.</p>
+<p>JSONL is our source of truth because it keeps every field. Markdown feeds Case Study 2 because it keeps the page labels at far fewer tokens. Details are in <code>reports/format_decision.md</code>.</p>
 
 
       </google-codelab-step>
     
       <google-codelab-step label="Part 7 - Build vs buy" duration="4">
-        <p>One clean statement page and one scanned page, our stack against AWS Textract (<code>reports/build_vs_buy.md</code>). pdfplumber matched the clean page&#39;s text layer exactly (WER 0.0000) vs Textract 0.0052; on the scanned page Textract leads (0.0052 vs Tesseract 0.0155) and found a table we missed, but only 38 cells matched exactly with 21 unmatched rows on each side. At $0.0150/page, <code>AnalyzeDocument(TABLES)</code> on the configured 500k pages/year is about $7,500/year. <code>managed.enabled: false</code> stays the default; live calls only after the residency, retention and training-use questions in the report are answered in writing.</p>
-<pre><code language="language-bash" class="language-bash">python src/managed/compare.py              # page-hash cache, no API calls
-python src/managed/compare.py --call-api   # populate the cache (2 Textract requests)
+        <p>Compare the clean and scanned statement pages in <code>reports/build_vs_buy.md</code>, including text and table-cell outputs under <code>reports/managed/</code>. The script reads page-hash cache entries by default:</p>
+<pre><code language="language-bash" class="language-bash">python src/managed/compare.py
+</code></pre>
+<p>To populate the cache, explicitly allow the two Textract requests:</p>
+<pre><code language="language-bash" class="language-bash">python src/managed/compare.py --call-api
 dvc add data/managed
 </code></pre>
+<p>Review the provider pricing and client-document data-handling questions in the report before enabling live calls. <code>managed.enabled: false</code> remains the default; DVC stages can use cache hits but make no API calls when the cache misses.</p>
 
 
       </google-codelab-step>
@@ -121,17 +161,47 @@ dvc metrics diff
 
       </google-codelab-step>
     
-      <google-codelab-step label="Part 11 - XBRL validation" duration="5">
-        <p><code>src/xbrl.py</code> maps each statement line to a <code>us-gaap</code> concept with <code>config/label_map.yaml</code>, then compares the PDF value to the fact from the filing&#39;s own iXBRL (<code>data/xbrl/facts.csv</code>, <code>data/xbrl/comparison.csv</code>). Match rates (<code>reports/xbrl.md</code>): traditional balance sheet 97.3% and income statement 87.5%; Docling 98.9% / 87.5%. Diagnosed case - <code>InterestExpenseNonoperating</code> differs only in sign, because the PDF prints a negative presentation value while the XBRL fact is positive; we classify it <code>sign</code> and keep both source values rather than silently flipping it. Caption fragments that are not monetary statement rows are excluded from the denominator and reported for audit.</p>
+      <google-codelab-step label="Part 11 - XBRL validation" duration="4">
+        <p>We check the numbers our pipeline read from the PDF tables against the filing&#39;s own XBRL tags, which Arelle reads for us.</p>
+<pre><code language="language-bash" class="language-bash">dvc repro xbrl
+dvc metrics show
+</code></pre>
+<p>Each table row is matched to an XBRL concept using our dictionary first, then the filing&#39;s own labels, then fuzzy matching. Then the values are compared.</p>
+<table>
+<tr><td colspan="1" rowspan="1"><p>path</p>
+</td><td colspan="1" rowspan="1"><p>statement</p>
+</td><td colspan="1" rowspan="1"><p>matched / compared</p>
+</td><td colspan="1" rowspan="1"><p>rate</p>
+</td></tr>
+<tr><td colspan="1" rowspan="1"><p>traditional</p>
+</td><td colspan="1" rowspan="1"><p>balance_sheet</p>
+</td><td colspan="1" rowspan="1"><p>107 / 110</p>
+</td><td colspan="1" rowspan="1"><p>97.3%</p>
+</td></tr>
+<tr><td colspan="1" rowspan="1"><p>traditional</p>
+</td><td colspan="1" rowspan="1"><p>income_statement</p>
+</td><td colspan="1" rowspan="1"><p>119 / 136</p>
+</td><td colspan="1" rowspan="1"><p>87.5%</p>
+</td></tr>
+<tr><td colspan="1" rowspan="1"><p>docling</p>
+</td><td colspan="1" rowspan="1"><p>balance_sheet</p>
+</td><td colspan="1" rowspan="1"><p>93 / 94</p>
+</td><td colspan="1" rowspan="1"><p>98.9%</p>
+</td></tr>
+<tr><td colspan="1" rowspan="1"><p>docling</p>
+</td><td colspan="1" rowspan="1"><p>income_statement</p>
+</td><td colspan="1" rowspan="1"><p>119 / 136</p>
+</td><td colspan="1" rowspan="1"><p>87.5%</p>
+</td></tr>
+</table>
+<p>Most of what&#39;s left is a sign convention, not an error: the statement shows an expense as <code>(27,117)</code>, while XBRL stores it as a positive number.</p>
+<p>One fix: &#34;Other expense, net&#34; failed on the 10-Q because Akamai tagged it with a different concept than in the 10-K. Letting the search fall back to the filing&#39;s own labels fixed it without touching the dictionary. Every remaining mismatch is explained in <code>reports/xbrl.md</code>.</p>
 
 
       </google-codelab-step>
     
       <google-codelab-step label="Part 12 - Serving layer (API &#43; UI)" duration="4">
-        <pre><code language="language-bash" class="language-bash">make api     # FastAPI + Swagger at http://127.0.0.1:8000/docs
-make ui      # Streamlit at http://127.0.0.1:8501
-</code></pre>
-<p>A read-only FastAPI backend serves the corpus as JSON - filings, provenance blocks, Markdown, tables, XBRL facts, search, metrics and benchmarks - with runnable Swagger at <code>/docs</code>; the Streamlit frontend browses the same data in tabs. Show <code>/health</code>, run one <code>/search</code> with <strong>Try it out</strong>, then the explorer. <code>make bundle</code> freezes a portable <code>data/serve</code> for Replit or Vercel; deployment notes are in <code>docs/serving.md</code>.</p>
+        <p><code>uvicorn src.api.main:app</code> serves the corpus as JSON with Swagger at <code>/docs</code>; <code>streamlit run app/streamlit_app.py</code> is the browser UI. Show <code>/health</code>, run one <code>/search</code> from the Swagger <strong>Try it out</strong> button, then the Streamlit explorer. Deployment (Replit API, Vercel API, Streamlit Cloud UI) is in <code>docs/serving.md</code>.</p>
 
 
       </google-codelab-step>
