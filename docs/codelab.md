@@ -218,7 +218,16 @@ One fix: "Other expense, net" failed on the 10-Q because Akamai tagged it with a
 ## Part 12 - Serving layer (API + UI)
 Duration: 4
 
-`uvicorn src.api.main:app` serves the corpus as JSON with Swagger at `/docs`;
-`streamlit run app/streamlit_app.py` is the browser UI. Show `/health`, run one
-`/search` from the Swagger **Try it out** button, then the Streamlit explorer.
-Deployment (Replit API, Vercel API, Streamlit Cloud UI) is in `docs/serving.md`.
+```bash
+make serve-venv   # one-time: isolated venv for the serving deps
+make api          # backend  -> http://127.0.0.1:8000/docs
+make ui           # frontend -> http://127.0.0.1:8501
+make test-api     # API contract tests
+```
+
+`make api` wraps `uvicorn src.api.main:app` and `make ui` wraps
+`streamlit run app/streamlit_app.py`. The backend serves the corpus as JSON with
+Swagger at `/docs`; show `/health`, run one `/search` from the Swagger **Try it
+out** button, then the Streamlit explorer. `make bundle` freezes the portable
+`data/serve` bundle, and deployment (Replit API, Vercel API, Streamlit Cloud UI)
+is in `docs/serving.md`.
