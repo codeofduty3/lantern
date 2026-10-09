@@ -5,7 +5,7 @@ corpus (Markdown + JSONL with page/bbox provenance), versioned end-to-end with D
 Team: codeofduty3. Company: AKAM (Akamai Technologies) - one 10-K and one 10-Q filed 2024-01-01..2026-01-01 (pinned in `params.yaml`).
 
 - Codelab: <https://lantern-codelab.vercel.app>
-- Demo video (10 min): `<link>`
+- Demo video (10 min): <https://youtu.be/Awi4rfc2l88>
 - DVC remote: see [DVC remote access](#dvc-remote-access)
 
 ## Architecture
