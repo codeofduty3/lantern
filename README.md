@@ -4,7 +4,7 @@ A reproducible pipeline that turns SEC 10-K/10-Q filings into a layout-aware, XB
 corpus (Markdown + JSONL with page/bbox provenance), versioned end-to-end with DVC.
 Team: codeofduty3. Company: AKAM (Akamai Technologies) - one 10-K and one 10-Q filed 2024-01-01..2026-01-01 (pinned in `params.yaml`).
 
-- Codelab: `<link>`
+- Codelab: <https://lantern-codelab.vercel.app>
 - Demo video (10 min): `<link>`
 - DVC remote: see [DVC remote access](#dvc-remote-access)
 
@@ -90,6 +90,11 @@ A read-only **FastAPI backend** over the corpus (interactive Swagger UI at
 `/docs`, every operation runnable in place) and a **Streamlit frontend** that
 browses filings, provenance blocks, tables, XBRL facts, search and metrics.
 Full deployment notes are in [docs/serving.md](docs/serving.md).
+
+Live:
+
+- Codelab (static): <https://lantern-codelab.vercel.app>
+- API (Vercel Python function): <https://lantern-bay.vercel.app> - Swagger at `/docs`
 
 ```bash
 make serve-venv     # create .venv-serve and install both requirements files

@@ -41,9 +41,14 @@ reports/ocr_calibration_drafts/*.txt
 .dvc/tmp/
 .dvc/config.local
 
+# Vercel CLI link + generated env (contains a VERCEL_OIDC_TOKEN - never commit)
+.vercel/
+.env.local
+
 # Optional: large model/cache directories if used locally
 models/
 weights/
 checkpoints/
 tests/fixtures/sources/
 repro.log
+.vercel

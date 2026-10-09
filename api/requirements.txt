@@ -1,0 +1,6 @@
+# Dependencies for the Vercel serverless function only (mirrors src/api/requirements.txt).
+# The repository-root requirements.txt is the full pipeline (torch, docling, layoutparser,
+# opencv, ...) and is far past Vercel's 500 MB uncompressed bundle limit, so the function
+# must resolve to this lean file instead.
+fastapi==0.115.6
+pydantic==2.13.5
