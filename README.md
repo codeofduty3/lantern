@@ -154,7 +154,7 @@ playwright install chromium        # only needed to re-run render / make_fixture
 ## Reproduction (grader contract)
 
 ```bash
-git clone <your-repo> lantern && cd lantern
+git clone https://github.com/codeofduty3/lantern.git lantern && cd lantern
 git checkout submission
 python -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt
@@ -201,11 +201,11 @@ pip install "botocore[crt]"
 | Stage | Time for both filings |
 |---|---|
 | download + render | ~2 min (network) |
-| parse_pdfplumber | `<fill>` |
-| tables | `<fill>` |
-| layout | `<fill>` (first run downloads model weights) |
-| parse_docling | `<fill>` (first run downloads models) |
-| export, xbrl, evaluate | `<fill>` (Arelle fetches the US-GAAP taxonomy once) |
+| parse_pdfplumber | ~3 s (160 pages x 0.016 s/page) |
+| tables | ~1.5 min (75 table-candidate pages x 1.182 s/page) |
+| layout | ~2 min (160 pages x 0.641 s/page), plus the first-run detector weights |
+| parse_docling | ~8 min (160 pages x 3.050 s/page), plus the first-run models |
+| export, xbrl, evaluate | not separately benchmarked; Arelle fetches the US-GAAP taxonomy once on the first run |
 
 ## Manual inputs (made by the team, versioned)
 
@@ -219,13 +219,20 @@ pip install "botocore[crt]"
 
 ## Generative AI disclosure
 
-`<Declare, per the course policy, which tools were used and for what.>`
+Generative AI tools were used as drafting and debugging assistants. Claude and ChatGPT helped
+write and review Python, DVC/CI configuration and report prose, and answered format questions
+(EDGAR and iXBRL structure, Camelot table modes, XBRL concept mapping). One ChatGPT session is
+also the Part 6 retrieval experiment itself: three questions per format on the AKAM 10-Q, one
+fresh chat per format, recorded in `reports/format_decision.md`.
+
+Those tools are not authors. Every AI-assisted change was reviewed, edited, run and validated
+by the member who committed it, and no unreviewed AI output is part of this submission.
 
 ## Attestation
 
 WE ATTEST THAT WE HAVEN’T USED ANY OTHER STUDENTS’ WORK IN OUR ASSIGNMENT AND ABIDE BY
 THE POLICIES LISTED IN THE STUDENT HANDBOOK.
 
-- Member 1: __ %
-- Member 2: __ %
-- Member 3: __ %
+- Member 1: 33.34 %
+- Member 2: 33.33 %
+- Member 3: 33.33 %
