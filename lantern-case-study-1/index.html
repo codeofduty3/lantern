@@ -201,7 +201,12 @@ dvc metrics show
       </google-codelab-step>
     
       <google-codelab-step label="Part 12 - Serving layer (API &#43; UI)" duration="4">
-        <p><code>uvicorn src.api.main:app</code> serves the corpus as JSON with Swagger at <code>/docs</code>; <code>streamlit run app/streamlit_app.py</code> is the browser UI. Show <code>/health</code>, run one <code>/search</code> from the Swagger <strong>Try it out</strong> button, then the Streamlit explorer. Deployment (Replit API, Vercel API, Streamlit Cloud UI) is in <code>docs/serving.md</code>.</p>
+        <pre><code language="language-bash" class="language-bash">make serve-venv   # one-time: isolated venv for the serving deps
+make api          # backend  -&gt; http://127.0.0.1:8000/docs
+make ui           # frontend -&gt; http://127.0.0.1:8501
+make test-api     # API contract tests
+</code></pre>
+<p><code>make api</code> wraps <code>uvicorn src.api.main:app</code> and <code>make ui</code> wraps <code>streamlit run app/streamlit_app.py</code>. The backend serves the corpus as JSON with Swagger at <code>/docs</code>; show <code>/health</code>, run one <code>/search</code> from the Swagger <strong>Try it out</strong> button, then the Streamlit explorer. <code>make bundle</code> freezes the portable <code>data/serve</code> bundle, and deployment (Replit API, Vercel API, Streamlit Cloud UI) is in <code>docs/serving.md</code>.</p>
 
 
       </google-codelab-step>
