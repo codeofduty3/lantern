@@ -21,6 +21,9 @@ htmlcov/
 .vscode/
 .idea/
 
+# Local demo/recording scripts (personal aids, not part of the deliverable)
+docs/video_script*.md
+
 # Generated project data and outputs
 # Data dirs are ignored per-directory in data/.gitignore (DVC-maintained).
 # Do NOT ignore data/ wholesale or via data/* + !data/*.dvc negation:
