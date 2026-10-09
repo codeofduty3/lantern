@@ -94,6 +94,7 @@ Full deployment notes are in [docs/serving.md](docs/serving.md).
 Live:
 
 - Codelab (static): <https://lantern-codelab.vercel.app>
+- UI (Streamlit Community Cloud): <https://lantern-explorer.streamlit.app>
 - API (Vercel Python function): <https://lantern-bay.vercel.app> - Swagger at `/docs`
 
 ```bash
