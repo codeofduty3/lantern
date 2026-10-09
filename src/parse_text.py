@@ -74,6 +74,25 @@ def needs_ocr(sig: dict, cfg: dict):
     return False, "text-layer"
 
 
+def extract_reading_order(page):
+    """Use left-column-first reading order when the page has a clear central gutter."""
+    x0, top, x1, bottom = page.bbox
+    middle = (x0 + x1) / 2
+    words = page.extract_words(x_tolerance=1.5, y_tolerance=3)
+    left = [w for w in words if w["x1"] <= middle]
+    right = [w for w in words if w["x0"] >= middle]
+    crossing = [w for w in words if w["x0"] < middle < w["x1"]]
+    if len(left) >= 20 and len(right) >= 20 and len(crossing) <= 1:
+        left_text = page.crop((x0, top, middle, bottom)).extract_text(
+            x_tolerance=1.5, y_tolerance=3
+        ) or ""
+        right_text = page.crop((middle, top, x1, bottom)).extract_text(
+            x_tolerance=1.5, y_tolerance=3
+        ) or ""
+        return "\n".join(part for part in (left_text, right_text) if part)
+    return page.extract_text(x_tolerance=1.5, y_tolerance=3) or ""
+
+
 # ---------------------------------------------------------------- OCR
 def ocr_image(img, dpi: int, config: str, offset=(0.0, 0.0)):
     """Tesseract on a PIL image -> (text, words with bbox in points, mean conf)."""
@@ -138,6 +157,7 @@ def parse_pdf(pdf_path, out_dir, stem, doc_id, cfg, mcfg, log):
                          "units": "pt", "origin": "top-left", "extractor": engine,
                          "ocr": True, "conf": w["conf"]} for w in words]
             else:
+                txt = extract_reading_order(page)
                 recs = [{"doc_id": doc_id, "page": n, "text": w["text"],
                          "bbox": [w["x0"], w["top"], w["x1"], w["bottom"]],
                          "units": "pt", "origin": "top-left", "extractor": "pdfplumber",
@@ -162,6 +182,8 @@ def extract_page_text(pdf_path, page_no=1):
         txt = page.extract_text(x_tolerance=1.5, y_tolerance=3) or ""
         if needs_ocr(page_signals(page, txt), cfg)[0]:
             txt = ocr_page(page, cfg["dpi"], cfg["config"])[0]
+        else:
+            txt = extract_reading_order(page)
     return txt
 
 

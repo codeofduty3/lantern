@@ -3,16 +3,30 @@
 <!-- AUTO:START (generated, do not edit) -->
 | dimension | traditional | docling | source |
 |---|---|---|---|
-| WER (mean) | - | - | eval.md |
-| reading-order WER (multi-column stratum) | not scored (no text GT) | not scored (no text GT) | eval.md; tests/fixtures/gt/CONVENTIONS.md |
-| footnote-text WER | not scored (no text GT) | not scored (no text GT) | eval.md; requires footnote ground-truth stratum |
-| CER (mean) | - | - | eval.md |
-| numeric accuracy | - | - | eval.md |
+| WER (mean) | 0.028 | 0.154 | eval.md |
+| reading-order WER (multi-column stratum) | 0.000 | 0.000 | eval.md; tests/fixtures/gt/CONVENTIONS.md |
+| footnote-text WER | 0.002 | 0.229 | eval.md; requires footnote ground-truth stratum |
+| CER (mean) | 0.017 | 0.128 | eval.md |
+| numeric accuracy | 0.953 | 0.898 | eval.md |
 | table cell F1 | 0.947 | 1.000 | eval.md |
 | XBRL match rate | 0.919 | 0.922 | xbrl.md |
 | s/page p50 | - (text) / - (tables) / 0.641 (layout) | 3.050 | benchmarks.md |
 | Part 10 coverage | text: 100 pages; 100 non-empty; 0 empty; 0 errors; tables: 75 pages; 75 non-empty; 0 empty; 0 errors; layout: 100 pages; 98 non-empty; 2 empty; 0 errors | 100 pages; 99 non-empty; 1 empty; 0 errors | data/bench/*.csv |
 | provenance | page + bbox per block (layout) | page + bbox per item (prov.jsonl, normalized to top-left) | data/export, data/docling |
+
+WER by stratum (reading order shows on multi-column pages):
+
+| stratum              |   docling |   traditional |
+|:---------------------|----------:|--------------:|
+| contents             |    0.1575 |        0.0282 |
+| cover                |    0.2111 |        0.0778 |
+| dense_notes          |    0.0737 |        0.0206 |
+| dense_notes_footnote |    0.2288 |        0.0024 |
+| exhibit              |    0.1196 |        0.0036 |
+| multi-column         |    0      |        0      |
+| prose                |    0.2755 |        0.0112 |
+| scanned              |    0.1495 |        0.0155 |
+| statement            |    0.0945 |        0.0527 |
 
 Rendered PDF vs original iXBRL HTML (Docling), data/docling/html_vs_pdf.csv:
 
