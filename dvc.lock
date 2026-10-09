@@ -423,16 +423,16 @@ stages:
       nfiles: 2
     - path: src/evaluate.py
       hash: md5
-      md5: 1d9519106e35800c37b24646171e8482
-      size: 16808
+      md5: 414729bcd9857f430a70d13f4349efeb
+      size: 16985
     - path: src/tables.py
       hash: md5
       md5: 491238ce9cb5206fe1e588526654e029
       size: 19938
     - path: tests/fixtures/gt
       hash: md5
-      md5: b016f97e106d4c297d82fcfdc217c7b0.dir
-      size: 5073
+      md5: d1c2e99c6e10abada4177d90504c7e74.dir
+      size: 5047
       nfiles: 4
     params:
       params.yaml:
